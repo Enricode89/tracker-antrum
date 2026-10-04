@@ -103,6 +103,9 @@ h2{margin:0;font-size:17px;font-weight:700}
 /* pulizie */
 .paybtn{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:0;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
 .paybtn.ok{background:var(--green)} .paybtn.no{background:var(--red)}
+.flags{display:flex;gap:8px}.flags .paybtn{flex:1;justify-content:center;padding:0 10px}
+.sbox{border-radius:18px;padding:12px 16px}.sbox .v{font-size:24px;font-weight:800}.sbox.due{background:var(--red-t);color:var(--red-d)}.sbox.ok{background:var(--green-t);color:var(--green-d)}
+.app::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--ground);z-index:30}
 .prev{font-size:12px;font-weight:700;color:var(--muted);background:#ECEDEA;padding:8px 12px;border-radius:999px}
 
 /* calendario */
@@ -244,7 +247,10 @@ const dLabel = iso => { const d = parse(iso); return d.getUTCDate() + ' ' + MESI
 const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? null : n; };
 const isManual = b => b.source === 'diretta' || (b.manual && !b.email_id);
 const colorOf = b => isManual(b) ? CH_COL.diretta : CH_COL[b.source];
-const clean = b => b.cleaning_cost ?? 27;
+const pul = b => +(b.cleaning_cost ?? 20);   // solo pulizia
+const lin = b => +(b.linen_cost ?? 7);       // solo biancheria
+const clean = b => pul(b) + lin(b);
+const unpaid = b => (b.cleaning_paid ? 0 : pul(b)) + (b.linen_paid ? 0 : lin(b));
 
 function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
@@ -376,14 +382,14 @@ function viewHome() {
       <div class="ic" style="background:${tint};color:${ink}">${ic(icon)}</div>
       <span class="lab">${lab}</span><span class="big">${big}</span><span class="sub">${sub}</span></button>`;
   const occ = Math.round(c.notti / (r.days * 2) * 100);
-  const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && !b.cleaning_paid);
+  const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && (!b.cleaning_paid || !b.linen_paid));
   let html = header('Home', true) + `<section class="tiles">
     ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', meur0(c.netto), 'incassato ' + meur0(c.incasso))}
     ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${meur0(c.loft.netto)}<br>Suite ${meur0(c.suite.netto)}</span>`, 'entrate e uscite')}
     ${tile('notti', 'moon', '#E6F0FA', '#1F5D99', 'Notti prenotate', c.notti, `${c.pren} prenotazioni · ${occ}%`)}
     <button class="tile" onclick="go('pul')"><div class="ic" style="background:#E3F2F6;color:#1C6E85">${ic('spark')}</div>
       <span class="lab">Pulizie</span><span class="big">${c.nPulizie} <span style="font-size:14px;font-weight:600;opacity:.75">nel periodo</span></span>
-      <span class="sub" style="opacity:1;font-weight:700;color:${daPagare.length ? 'var(--red-d)' : 'var(--green)'}">${daPagare.length ? daPagare.length + ' da pagare · ' + eur0(daPagare.reduce((s, b) => s + clean(b), 0)) : 'nessuna da pagare'}</span></button>
+      <span class="sub" style="opacity:1;font-weight:700;color:${daPagare.length ? 'var(--red-d)' : 'var(--green)'}">${daPagare.length ? daPagare.length + ' da pagare · ' + eur0(daPagare.reduce((s, b) => s + unpaid(b), 0)) : 'nessuna da pagare'}</span></button>
   </section>`;
 
   if (S.open === 'guadagno') {
@@ -567,37 +573,45 @@ function viewPul() {
   const r = range();
   const all = S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r)).sort((a, b) => b.checkout.localeCompare(a.checkout));
   const done = all.filter(b => b.checkout <= todayIso());
-  const paid = done.filter(b => b.cleaning_paid), due = done.filter(b => !b.cleaning_paid);
-  const sum = a => a.reduce((s, b) => s + clean(b), 0);
+  const box = (title, key, cost) => {
+    const paid = done.filter(b => b[key]), due = done.filter(b => !b[key]);
+    const sum = a => a.reduce((s, b) => s + cost(b), 0);
+    return `<h2 style="font-size:15px;margin:14px 4px 8px">${title}</h2><div class="grid2">
+      <div class="sbox due"><div class="small" style="font-weight:700">Da pagare · ${due.length}</div><div class="v">${eur0(sum(due))}</div></div>
+      <div class="sbox ok"><div class="small" style="font-weight:700">Pagate · ${paid.length}</div><div class="v">${eur0(sum(paid))}</div></div></div>`;
+  };
+  const dueAny = done.filter(b => !b.cleaning_paid || !b.linen_paid), paidAll = done.filter(b => b.cleaning_paid && b.linen_paid);
   let list = all;
-  if (S.pulFilter === 'da') list = due; if (S.pulFilter === 'pagate') list = paid;
+  if (S.pulFilter === 'da') list = dueAny; if (S.pulFilter === 'pagate') list = paidAll;
   const chip = (k, l) => `<button class="chip" aria-pressed="${S.pulFilter === k}" onclick="S.pulFilter='${k}';render()">${l}</button>`;
-  return header('Pulizie') + `<div class="grid2">
-      <div style="background:var(--red-t);border-radius:18px;padding:14px 16px;color:var(--red-d)"><div class="small" style="font-weight:700">Da pagare · ${due.length}</div><div style="font-size:26px;font-weight:800">${eur0(sum(due))}</div></div>
-      <div style="background:var(--green-t);border-radius:18px;padding:14px 16px;color:var(--green-d)"><div class="small" style="font-weight:700">Pagate · ${paid.length}</div><div style="font-size:26px;font-weight:800">${eur0(sum(paid))}</div></div></div>
+  const flag = (b, key, label, cost) => `<button class="paybtn ${b[key] ? 'ok' : 'no'}" aria-label="${label} ${b[key] ? 'pagata' : 'da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}','${key}')">${ic(b[key] ? 'check' : 'x', 15, 3)}${label} ${eur0(cost(b))}</button>`;
+  const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
+  return header('Pulizie') + box('Pulizie', 'cleaning_paid', pul) + box('Biancheria', 'linen_paid', lin) + `
     <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
     <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
     <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
-      <div class="card row" style="padding:12px 12px 12px 8px;${fut ? 'opacity:.6' : ''}">
-        <div class="datebox"><span>${GG[d.getUTCDay()]}</span><b>${d.getUTCDate()}</b></div>
-        <div style="flex:1;min-width:0"><div class="t" style="font-weight:700">${PROP[b.property]}</div><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.guest_name || 'Ospite')} · ${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${eur0(clean(b))}</div></div>
-        ${fut ? '<span class="prev">Prevista</span>' : `<button class="paybtn ${b.cleaning_paid ? 'ok' : 'no'}" aria-label="${b.cleaning_paid ? 'Pagata' : 'Da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}')">${ic(b.cleaning_paid ? 'check' : 'x', 16, 3)}${b.cleaning_paid ? 'Pagata' : 'Da pagare'}</button>`}
+      <div class="card stack" style="padding:12px;gap:10px;${fut ? 'opacity:.6' : ''}">
+        <div class="row"><div class="datebox"><span>${GG[d.getUTCDay()]}</span><b>${d.getUTCDate()}</b></div>
+          <div style="flex:1;min-width:0"><div class="t" style="font-weight:700">${PROP[b.property]}</div><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.guest_name || 'Ospite')} · ${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${eur0(clean(b))}</div></div>
+          ${fut ? '<span class="prev">Prevista</span>' : ''}</div>
+        ${fut ? '' : `<div class="flags">${flag(b, 'cleaning_paid', 'Pulizia', pul)}${flag(b, 'linen_paid', 'Biancheria', lin)}</div>`}
       </div>`; }).join('') : `<div class="empty">Nessun check-out in ${periodName()}</div>`}</div>
-    ${due.length ? `<button class="btn green mt" onclick="payAll()">${ic('check', 18, 2.6)} Segna tutte come pagate (${due.length})</button>` : ''}`;
+    ${dueP ? `<button class="btn green mt" onclick="payAll('cleaning_paid')">${ic('check', 18, 2.6)} Segna tutte le pulizie pagate (${dueP})</button>` : ''}
+    ${dueL ? `<button class="btn green mt" onclick="payAll('linen_paid')">${ic('check', 18, 2.6)} Segna tutta la biancheria pagata (${dueL})</button>` : ''}`;
 }
-async function togglePaid(id) {
-  const b = S.data.bookings.find(x => x.id === id); const v = !b.cleaning_paid;
-  b.cleaning_paid = v; render();
-  const { error } = await sb.from('bookings').update({ cleaning_paid: v }).eq('id', id);
-  if (error) { b.cleaning_paid = !v; render(); toast('Non salvato: ' + error.message); }
+async function togglePaid(id, key) {
+  const b = S.data.bookings.find(x => x.id === id); const v = !b[key];
+  b[key] = v; render();
+  const { error } = await sb.from('bookings').update({ [key]: v }).eq('id', id);
+  if (error) { b[key] = !v; render(); toast('Non salvato: ' + error.message); }
 }
-async function payAll() {
+async function payAll(key) {
   const r = range();
-  const ids = S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r) && b.checkout <= todayIso() && !b.cleaning_paid).map(b => b.id);
-  const { error } = await sb.from('bookings').update({ cleaning_paid: true }).in('id', ids);
+  const ids = S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r) && b.checkout <= todayIso() && !b[key]).map(b => b.id);
+  const { error } = await sb.from('bookings').update({ [key]: true }).in('id', ids);
   if (error) return toast('Non salvato: ' + error.message);
-  S.data.bookings.forEach(b => { if (ids.includes(b.id)) b.cleaning_paid = true; });
-  toast(ids.length + ' pulizie segnate come pagate'); render();
+  S.data.bookings.forEach(b => { if (ids.includes(b.id)) b[key] = true; });
+  toast(ids.length + (key === 'linen_paid' ? ' biancherie' : ' pulizie') + ' segnate come pagate'); render();
 }
 
 // ---------------- Spese fisse ----------------
