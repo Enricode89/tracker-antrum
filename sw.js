@@ -1,5 +1,5 @@
 // Service worker: l'app si apre anche con rete debole; i dati arrivano sempre freschi da Supabase.
-const CACHE = 'antrum-v3';
+const CACHE = 'antrum-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
