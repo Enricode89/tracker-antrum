@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121A21">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Antrum">
+<title>Antrum · Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#121A21; --ground:#F4F5F2; --card:#FFFFFF; --line:#E3E5E0; --line2:#EEEFEC; --muted:#5E6670; --text2:#3F464D;
+  --green:#1E7A45; --green-d:#17633A; --green-t:#E2F3E8;
+  --red:#C2362B; --red-d:#A8321F; --red-t:#FBE6E3;
+  --amber-t:#FFF4D8; --amber-d:#4D3400;
+  --airbnb:#F2B300; --booking:#1F6FD1; --manual:#1E8A4C;
+  --r-lg:22px; --r-md:16px; --r-sm:12px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ground);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+body{min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--booking);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-top:var(--safe-t)}
+main{flex:1;padding:0 16px calc(110px + var(--safe-b))}
+h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.02em}
+h2{margin:0;font-size:17px;font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.hidden{display:none!important}
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.card{background:var(--card);border-radius:var(--r-lg);padding:18px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.mt{margin-top:12px}.mt2{margin-top:22px}
+
+/* header + periodo */
+.top{padding:22px 0 14px;display:flex;flex-direction:column;gap:12px}
+.brand{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.period{display:flex;gap:8px;align-items:center}
+.period select{appearance:none;-webkit-appearance:none;height:44px;border-radius:14px;border:1px solid #D9DCD6;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23121A21' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;padding:0 34px 0 14px;font-weight:700;font-size:15px}
+.iconbtn{width:44px;height:44px;border-radius:14px;border:1px solid #D9DCD6;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.seg{display:flex;background:#E7E9E4;border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;height:40px;border:0;border-radius:11px;background:transparent;color:var(--muted);font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{height:40px;padding:0 16px;border-radius:999px;border:1px solid #D9DCD6;background:#fff;font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* tiles home */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;min-height:160px;border-radius:var(--r-lg);border:0;background:var(--card);text-align:left;color:var(--ink);text-decoration:none}
+.tile[aria-expanded="true"]{background:var(--ink);color:#fff}
+.tile .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.tile[aria-expanded="true"] .ic{background:rgba(255,255,255,.14)!important;color:#fff!important}
+.tile .lab{font-size:13px;font-weight:600;opacity:.75}
+.tile .big{font-size:25px;font-weight:800;letter-spacing:-.02em}
+.tile .sub{font-size:12px;font-weight:500;opacity:.75}
+.ln{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:14px;color:var(--text2);gap:10px}
+.ln.b{color:var(--ink);font-weight:700}
+.ln.sep{border-top:1px solid var(--line);padding-top:11px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
+.lk{display:flex;align-items:center;gap:8px}
+.netbox{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;margin-top:6px;border-radius:var(--r-md);background:var(--green-t);color:var(--green-d)}
+.netbox.neg{background:var(--red-t);color:var(--red-d)}
+.netbox strong{font-size:22px;font-weight:800}
+.bar{display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px;background:var(--line2)}
+.bar>div{min-width:2px}
+.track{height:10px;background:#F0F1EE;border-radius:999px}
+.track>div{height:10px;background:var(--ink);border-radius:999px}
+.minis{display:flex;gap:8px}
+.mini{flex:1;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.mini b{font-size:18px}
+.mini span{font-size:11px;font-weight:700}
+
+/* liste */
+.list{background:var(--card);border-radius:20px;padding:4px 16px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line2);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
+.item:last-child{border-bottom:0}
+.item .t{font-weight:700;font-size:15px}
+.item .s{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.item .amt{font-weight:700;font-size:15px;white-space:nowrap}
+.plus{color:var(--green)} .minus{color:var(--red-d)}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;letter-spacing:.02em}
+.daylab{font-size:12px;font-weight:700;color:var(--muted);padding:14px 4px 8px}
+.datebox{width:44px;display:flex;flex-direction:column;align-items:center;line-height:1.1;flex-shrink:0}
+.datebox span{font-size:11px;font-weight:700;color:var(--muted)}
+.datebox b{font-size:20px;font-weight:800}
+.dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+.alert{display:flex;gap:12px;align-items:center;background:var(--amber-t);color:var(--amber-d);border-radius:16px;padding:14px 16px;border:0;width:100%;text-align:left;font-size:13px;font-weight:500}
+.alert b{font-weight:700}
+.empty{padding:28px 10px;text-align:center;color:var(--muted);font-size:14px}
+
+/* pulizie */
+.paybtn{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:0;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+.paybtn.ok{background:var(--green)} .paybtn.no{background:var(--red)}
+.prev{font-size:12px;font-weight:700;color:var(--muted);background:#ECEDEA;padding:8px 12px;border-radius:999px}
+
+/* calendario */
+.cal{background:var(--card);border-radius:var(--r-lg);padding:14px 8px 12px}
+.cal .dow,.cal .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal .dow{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding-bottom:6px}
+.cal .grid{row-gap:6px}
+.cell{display:flex;flex-direction:column;gap:3px;padding:4px 0 6px;min-height:58px;border:0;background:transparent}
+.cell .n{align-self:center;width:30px;height:30px;line-height:30px;border-radius:999px;font-size:14px;font-weight:600;text-align:center}
+.cell.sel .n{background:var(--ink);color:#fff;font-weight:800}
+.cell.today .n{box-shadow:inset 0 0 0 2px var(--ink)}
+.cell .b{display:block;height:9px;margin:0 3px;border-radius:6px;background:#EEF0EC}
+.cell .b.big{height:22px;background:transparent}
+
+/* nav */
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:8px 8px calc(10px + var(--safe-b));display:flex;justify-content:center;z-index:20}
+nav.bottom .in{max-width:480px;width:100%;display:flex;justify-content:space-around;align-items:center}
+nav.bottom a,nav.bottom button.n{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px;min-height:44px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;background:none;border:0;padding:0}
+nav.bottom [aria-current="page"]{color:var(--ink);font-weight:800}
+.fab{width:56px;height:56px;border-radius:18px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;border:0}
+
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(18,26,33,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--ground);width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(24px + var(--safe-b));animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
+.field input,.field select,.field textarea{height:50px;border-radius:14px;border:1px solid #D9DCD6;background:#fff;padding:0 14px;font-size:15px;font-weight:600;color:var(--ink);width:100%}
+.field textarea{height:80px;padding:12px 14px;resize:none;font-weight:500}
+.money{display:flex;align-items:center;background:#fff;border-radius:18px;padding:0 18px;height:72px;border:2px solid var(--ink)}
+.money span{font-size:28px;font-weight:800}
+.money input{flex:1;min-width:0;border:0;outline:none;background:transparent;padding-left:10px;font-size:32px;font-weight:800}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cat{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;min-height:88px;border-radius:16px;background:#fff;border:2px solid transparent;font-size:12px;font-weight:600;line-height:1.2;text-align:center}
+.cat[aria-pressed="true"]{border-color:var(--ink);background:#EEF0EC}
+.cat .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.btn{height:54px;border-radius:16px;border:0;background:var(--ink);color:#fff;font-weight:700;font-size:16px;width:100%}
+.btn.green{background:var(--green)} .btn.ghost{background:transparent;color:var(--red-d);border:1px solid #E5C9C4}
+.btn:disabled{opacity:.5}
+.check{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:14px 16px;font-size:14px;font-weight:600}
+.check input{width:22px;height:22px;margin:0;accent-color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:14px;font-size:14px;font-weight:600;z-index:60;max-width:90vw}
+
+/* login */
+.login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;padding:24px;background:var(--ink);color:#fff;text-align:center}
+.login img{width:72px;height:72px;border-radius:18px}
+.pin{display:flex;gap:10px}
+.pin span{width:16px;height:16px;border-radius:999px;border:2px solid #A9B3BC}
+.pin span.on{background:var(--airbnb);border-color:var(--airbnb)}
+.keys{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.keys button{height:72px;border-radius:999px;border:0;background:#1D2730;color:#fff;font-size:26px;font-weight:700}
+.keys button.t{background:transparent;font-size:15px;font-weight:600}
+.err{color:#FFA79C;font-size:14px;min-height:20px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+'use strict';
+// =====================================================================
+// Configurazione
+// =====================================================================
+const SUPABASE_URL = 'https://tgswoagxubpglnirsuxi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_uwFBcSGHc5PSQp-Ma2nO5w_1BjhAZ4Z';   // chiave pubblica: i dati restano protetti dal PIN
+const LOGIN_EMAIL  = 'antrumloft@gmail.com';
+const PIN_LEN = 6;
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+const PROP = { loft: 'Loft', suite: 'Suite' };
+const CANALE = { airbnb: 'Airbnb', booking: 'Booking', diretta: 'Diretta' };
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const MESI_B = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const GG = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+const GG_L = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+
+const ICON = {
+  trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  house:'<path d="M3 21h18"/><path d="M5 21V8l6-4v17"/><path d="M13 21V10l6 3v8"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  spark:'<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
+  grid:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 2v4"/><path d="M16 2v4"/>',
+  swap:'<path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/>',
+  plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  left:'<path d="M15 18l-6-6 6-6"/>', right:'<path d="M9 18l6-6-6-6"/>',
+  x:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>', check:'<path d="M5 12l5 5L20 7"/>',
+  alert:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
+  repeat:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
+  receipt:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h4"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9"/><path d="M12 8v13"/><path d="M12 8c-2-4-6-4-6-1.5S10 8 12 8z"/><path d="M12 8c2-4 6-4 6-1.5S14 8 12 8z"/>',
+  cart:'<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11.5l2-8H6.2"/>',
+  bank:'<path d="M3 21h18"/><path d="M5 21V10"/><path d="M10 21V10"/><path d="M14 21V10"/><path d="M19 21V10"/><path d="M2 10l10-6 10 6z"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+};
+const ic = (n, s = 20, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
+
+const CAT_SPESA = {
+  spese:          { l: 'Spese',            i: 'receipt', bg: '#FBE6E3', fg: '#A8321F' },
+  pulizie_extra:  { l: 'Pulizie extra',    i: 'spark',   bg: '#E3F2F6', fg: '#1C6E85' },
+  utenze:         { l: 'Utenze',           i: 'bolt',    bg: '#FFF2D6', fg: '#8A5A00' },
+  kit_benvenuto:  { l: 'Kit benvenuto',    i: 'gift',    bg: '#FCE8F0', fg: '#A0285A' },
+  cibo_bevande:   { l: 'Cibo/Bevande',     i: 'cart',    bg: '#E8F4E0', fg: '#3F7A1C' },
+  tassa_soggiorno:{ l: 'Tassa di soggiorno', i: 'bank',  bg: '#EDEAE4', fg: '#5B4E3A' },
+  extra:          { l: 'Extra',            i: 'card',    bg: '#E3EEF9', fg: '#24578F' },
+};
+const CH_COL = { airbnb: '#F2B300', booking: '#1F6FD1', diretta: '#1E8A4C' };
+const CH_TINT = { airbnb: ['#FFF4D0', '#6B4E00'], booking: ['#DCE8FA', '#0B3F8A'], diretta: ['#E2F3E8', '#17633A'] };
+
+// =====================================================================
+// Utilità
+// =====================================================================
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let HIDE = (() => { try { return localStorage.getItem('antrum-hide') === '1'; } catch (e) { return false; } })();
+function toggleHide() { HIDE = !HIDE; try { localStorage.setItem('antrum-hide', HIDE ? '1' : '0'); } catch (e) {} render(); }
+const eur = (n, dec = 2) => HIDE ? '€ •••' : '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const eur0 = n => eur(Math.round(n || 0), 0);
+const todayIso = () => new Date().toLocaleDateString('sv-SE');
+const pad = n => String(n).padStart(2, '0');
+const isoOf = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+const parse = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+const addDays = (iso, n) => new Date(parse(iso).getTime() + n * 864e5).toISOString().slice(0, 10);
+const diffDays = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
+const daysIn = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+const dowOf = iso => parse(iso).getUTCDay();
+const dLabel = iso => { const d = parse(iso); return d.getUTCDate() + ' ' + MESI_B[d.getUTCMonth()]; };
+const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? null : n; };
+const isManual = b => b.source === 'diretta' || (b.manual && !b.email_id);
+const colorOf = b => isManual(b) ? CH_COL.diretta : CH_COL[b.source];
+const clean = b => b.cleaning_cost ?? 27;
+
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2400);
+}
+
+// =====================================================================
+// Stato
+// =====================================================================
+const now = new Date();
+const S = {
+  data: { bookings: [], expenses: [], fixed: [], adj: [] },
+  tab: 'home', mode: 'mese', y: now.getFullYear(), m: now.getMonth(),
+  open: 'guadagno', calProp: 'entrambe', calDay: todayIso(), movFilter: 'tutti', pulFilter: 'tutte',
+};
+
+async function loadData() {
+  const [b, e, f, a] = await Promise.all([
+    sb.from('bookings').select('*').order('checkin'),
+    sb.from('expenses').select('*').order('date'),
+    sb.from('fixed_expenses').select('*').order('property'),
+    sb.from('adjustments').select('*'),
+  ]);
+  const err = b.error || e.error || f.error || a.error;
+  if (err) throw err;
+  S.data = { bookings: b.data, expenses: e.data, fixed: f.data, adj: a.data };
+}
+
+// =====================================================================
+// Calcoli
+// =====================================================================
+function range() {
+  if (S.mode === 'anno') return { from: `${S.y}-01-01`, to: `${S.y + 1}-01-01`, days: diffDays(`${S.y}-01-01`, `${S.y + 1}-01-01`) };
+  const to = S.m === 11 ? `${S.y + 1}-01-01` : isoOf(S.y, S.m + 1, 1);
+  return { from: isoOf(S.y, S.m, 1), to, days: daysIn(S.y, S.m) };
+}
+const inR = (iso, r) => iso && iso >= r.from && iso < r.to;
+
+function fixedOccurrences(r) {
+  const out = [];
+  let y = +r.from.slice(0, 4), m = +r.from.slice(5, 7) - 1;
+  while (isoOf(y, m, 1) < r.to) {
+    const ms = isoOf(y, m, 1);
+    S.data.fixed.forEach(f => {
+      if (f.start_month <= ms && (!f.end_month || f.end_month >= ms)) {
+        out.push({ ...f, date: isoOf(y, m, Math.min(f.day_of_month, daysIn(y, m))) });
+      }
+    });
+    if (++m === 12) { m = 0; y++; }
+  }
+  return out;
+}
+
+function calc(r) {
+  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
+  const t = { ...P(), loft: P(), suite: P(), ch: { airbnb: 0, booking: 0, diretta: 0 }, mancanti: [] };
+  const add = (prop, k, v) => { t[k] += v; if (prop === 'entrambe') { t.loft[k] += v / 2; t.suite[k] += v / 2; } else if (t[prop]) t[prop][k] += v; };
+  S.data.bookings.forEach(b => {
+    const p = b.property;
+    if (inR(b.checkin, r)) {
+      if (b.status === 'confermata') {
+        add(p, 'pren', 1);
+        if (b.payout == null) t.mancanti.push(b);
+        add(p, 'incasso', +b.payout || 0);
+        add(p, 'lordo', +(b.guest_total ?? b.payout) || 0);
+        if (b.guest_total != null && b.payout != null) add(p, 'comm', b.guest_total - b.payout);
+        add(p, 'tassa', +b.tourist_tax || 0);
+      } else if (+b.payout > 0) {   // cancellata con penale
+        add(p, 'incasso', +b.payout); add(p, 'lordo', +b.payout);
+      }
+    }
+    if (b.status === 'confermata' && b.checkout && b.checkout >= r.from && b.checkout <= r.to && inR(b.checkout, r)) {
+      add(p, 'pulizie', clean(b)); add(p, 'nPulizie', 1);
+    }
+    if (b.status === 'confermata' && b.checkout) {
+      const s = b.checkin > r.from ? b.checkin : r.from, e = b.checkout < r.to ? b.checkout : r.to;
+      const n = Math.max(0, diffDays(s, e));
+      if (n) { add(p, 'notti', n); t.ch[isManual(b) ? 'diretta' : b.source] += n; }
+    }
+  });
+  S.data.expenses.filter(x => inR(x.date, r)).forEach(x => add(x.property, 'spese', +x.amount));
+  fixedOccurrences(r).forEach(f => add(f.property, 'fisse', +f.amount));
+  if (S.mode === 'anno') S.data.adj.filter(a => inR(a.date, r)).forEach(a => { add(a.property, 'rett', +a.amount); add(a.property, 'incasso', +a.amount); });
+  ['loft', 'suite', null].forEach(k => {
+    const o = k ? t[k] : t;
+    o.uscite = o.tassa + o.fisse + o.pulizie + o.spese;
+    o.netto = o.incasso - o.uscite;
+  });
+  t.days = r.days;
+  return t;
+}
+
+// =====================================================================
+// Render
+// =====================================================================
+function periodBar() {
+  const years = []; for (let y = 2026; y <= now.getFullYear() + 1; y++) years.push(y);
+  return `<div class="period">
+    <select aria-label="Vista" onchange="S.mode=this.value;render()">
+      <option value="mese" ${S.mode === 'mese' ? 'selected' : ''}>Mese</option>
+      <option value="anno" ${S.mode === 'anno' ? 'selected' : ''}>Anno</option>
+    </select>
+    ${S.mode === 'mese' ? `<select aria-label="Mese" style="flex:1" onchange="S.m=+this.value;render()">${MESI.map((n, i) => `<option value="${i}" ${i === S.m ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
+    <select aria-label="Anno" ${S.mode === 'anno' ? 'style="flex:1"' : ''} onchange="S.y=+this.value;render()">${years.map(y => `<option ${y === S.y ? 'selected' : ''}>${y}</option>`).join('')}</select>
+  </div>`;
+}
+const periodName = () => S.mode === 'anno' ? String(S.y) : `${MESI[S.m]} ${S.y}`;
+
+function header(title) {
+  return `<header class="top">
+    <div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${title}</h1></div>
+    <div class="row" style="gap:8px"><button class="iconbtn" aria-label="${HIDE ? 'Mostra importi' : 'Nascondi importi'}" aria-pressed="${HIDE}" onclick="toggleHide()">${ic(HIDE ? 'eyeoff' : 'eye', 18)}</button>
+    <button class="iconbtn" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button></div></div>
+    ${periodBar()}
+  </header>`;
+}
+
+function navBar() {
+  const it = (tab, label, icon) => `<button class="n" ${S.tab === tab ? 'aria-current="page"' : ''} onclick="go('${tab}')">${ic(icon, 22)}${label}</button>`;
+  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'grid')}${it('cal', 'Calendario', 'cal')}
+    <button class="fab" aria-label="Nuovo movimento" onclick="openNuovo()">${ic('plus', 24, 2.4)}</button>
+    ${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
+}
+
+function viewHome() {
+  const r = range(), c = calc(r);
+  const tile = (key, icon, tint, ink, lab, big, sub) =>
+    `<button class="tile" aria-expanded="${S.open === key}" onclick="S.open=S.open==='${key}'?null:'${key}';render()">
+      <div class="ic" style="background:${tint};color:${ink}">${ic(icon)}</div>
+      <span class="lab">${lab}</span><span class="big">${big}</span><span class="sub">${sub}</span></button>`;
+  const occ = Math.round(c.notti / (r.days * 2) * 100);
+  const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && !b.cleaning_paid);
+  let html = header('Home') + `<section class="tiles">
+    ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', eur0(c.netto), 'incassato ' + eur0(c.incasso))}
+    ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${eur0(c.loft.netto)}<br>Suite ${eur0(c.suite.netto)}</span>`, 'entrate e uscite')}
+    ${tile('notti', 'moon', '#E6F0FA', '#1F5D99', 'Notti prenotate', c.notti, `${c.pren} prenotazioni · ${occ}%`)}
+    <button class="tile" onclick="go('pul')"><div class="ic" style="background:#E3F2F6;color:#1C6E85">${ic('spark')}</div>
+      <span class="lab">Pulizie</span><span class="big">${c.nPulizie} <span style="font-size:14px;font-weight:600;opacity:.75">nel periodo</span></span>
+      <span class="sub" style="opacity:1;font-weight:700;color:${daPagare.length ? 'var(--red-d)' : 'var(--green)'}">${daPagare.length ? daPagare.length + ' da pagare · ' + eur0(daPagare.reduce((s, b) => s + clean(b), 0)) : 'nessuna da pagare'}</span></button>
+  </section>`;
+
+  if (S.open === 'guadagno') {
+    const parts = [['Commissioni portali', c.comm, '#9AA3AD'], ['Tassa di soggiorno da versare', c.tassa, '#8C7A5B'], ['Spese fisse', c.fisse, '#121A21'], ['Pulizie + biancheria', c.pulizie, '#1C6E85'], ['Spese manuali', c.spese, '#C2362B']];
+    html += `<section class="card mt stack" style="gap:14px"><div class="between"><h2>Dal lordo al netto</h2><span class="small muted">${periodName()}</span></div>
+      <div class="bar">${parts.map(p => p[1] > 0 ? `<div style="flex:${p[1]};background:${p[2]}"></div>` : '').join('')}${c.netto > 0 ? `<div style="flex:${c.netto};background:var(--green)"></div>` : ''}</div>
+      <div><div class="ln b"><span>Pagato dagli ospiti</span><span>${eur(c.lordo)}</span></div>
+      <div class="ln"><span class="lk"><span class="sw" style="background:#9AA3AD"></span>Commissioni portali</span><span>− ${eur(c.comm)}</span></div>
+      ${c.rett ? `<div class="ln"><span class="lk"><span class="sw" style="background:#E3E5E0"></span>Allineamento Airbnb</span><span>${c.rett >= 0 ? '+' : '−'} ${eur(Math.abs(c.rett))}</span></div>` : ''}
+      <div class="ln b sep"><span>Incassato</span><span>${eur(c.incasso)}</span></div>
+      ${parts.slice(1).map(p => `<div class="ln"><span class="lk"><span class="sw" style="background:${p[2]}"></span>${p[0]}</span><span>− ${eur(p[1])}</span></div>`).join('')}
+      <div class="netbox ${c.netto < 0 ? 'neg' : ''}"><span class="lk" style="font-weight:700">Netto</span><strong>${eur(c.netto)}</strong></div></div>
+      ${c.mancanti.length ? `<p class="small muted" style="margin:0">${c.mancanti.length} prenotazion${c.mancanti.length > 1 ? 'i' : 'e'} senza importo non ${c.mancanti.length > 1 ? 'sono' : 'è'} nei conti.</p>` : ''}
+      ${S.mode === 'anno' ? annualBars() : ''}
+    </section>`;
+  }
+  if (S.open === 'strutture') {
+    html += `<section class="stack mt">${['loft', 'suite'].map(k => { const p = c[k]; const tot = Math.max(p.incasso, p.uscite, 1); return `
+      <div class="card stack" style="gap:14px"><div class="between"><h2>Antrum ${PROP[k]}</h2><span style="font-size:18px;font-weight:800;color:${p.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${eur(p.netto)}</span></div>
+      <div class="stack" style="gap:6px"><div class="bar"><div style="flex:${p.uscite};background:var(--red)"></div><div style="flex:${Math.max(p.incasso - p.uscite, 0)};background:var(--green)"></div></div>
+      <div class="between" style="font-size:13px;font-weight:700"><span style="color:var(--green-d)">Entrate ${eur(p.incasso)}</span><span style="color:var(--red-d)">Uscite ${eur(p.uscite)}</span></div></div>
+      <div class="grid2" style="gap:6px 16px;font-size:13px;color:var(--text2)">
+        <span>Spese fisse</span><span style="text-align:right">${eur(p.fisse)}</span>
+        <span>Pulizie (${p.nPulizie})</span><span style="text-align:right">${eur(p.pulizie)}</span>
+        <span>Tassa di soggiorno</span><span style="text-align:right">${eur(p.tassa)}</span>
+        <span>Spese manuali</span><span style="text-align:right">${eur(p.spese)}</span></div></div>`; }).join('')}</section>`;
+  }
+  if (S.open === 'notti') {
+    html += `<section class="card mt stack" style="gap:18px"><h2>Notti per struttura</h2>
+      ${['loft', 'suite'].map(k => { const p = c[k], o = Math.round(p.notti / r.days * 100); return `<div class="stack" style="gap:8px">
+        <div class="between"><span style="font-weight:700">${PROP[k]}</span><span style="font-size:22px;font-weight:800">${p.notti} <span class="small muted" style="font-weight:600">notti</span></span></div>
+        <div class="track"><div style="width:${Math.min(o, 100)}%"></div></div>
+        <span class="small muted">${p.pren} prenotazioni · occupato ${o}%${p.pren ? ' · media ' + (p.notti / p.pren).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' notti' : ''}</span></div>`; }).join('')}
+      <div class="minis" style="border-top:1px solid var(--line);padding-top:14px">
+        ${['airbnb', 'booking', 'diretta'].map(k => `<div class="mini" style="background:${CH_TINT[k][0]};color:${CH_TINT[k][1]}"><span>${k === 'diretta' ? 'Dirette' : CANALE[k]}</span><b>${c.ch[k]}</b></div>`).join('')}</div>
+    </section>`;
+  }
+
+  // da completare
+  const todo = S.data.bookings.filter(b => b.status === 'confermata' && (b.payout == null || !b.checkout) && b.checkin >= addDays(todayIso(), -60));
+  if (todo.length) html += `<button class="alert mt" onclick="go('mov');S.movFilter='completare';render()">${ic('alert')}<span style="flex:1"><b>${todo.length} prenotazion${todo.length > 1 ? 'i' : 'e'} da completare</b> · manca importo o check-out</span><b>Apri</b></button>`;
+
+  // prossimi arrivi
+  const next = S.data.bookings.filter(b => b.status === 'confermata' && b.checkin >= todayIso()).slice(0, 4);
+  html += `<section class="mt2 stack" style="gap:10px"><h2 style="font-size:18px">Prossimi arrivi</h2>
+    <div class="list">${next.length ? next.map(bookingRow).join('') : '<div class="empty">Nessun arrivo in programma</div>'}</div></section>`;
+  return html;
+}
+
+function annualBars() {
+  const rows = [];
+  const save = { m: S.m, mode: S.mode };
+  S.mode = 'mese';
+  let max = 1;
+  for (let m = 0; m < 12; m++) { S.m = m; const c = calc(range()); rows.push(c); max = Math.max(max, c.incasso, c.uscite); }
+  S.m = save.m; S.mode = save.mode;
+  return `<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:14px">
+    <div class="between small muted"><span>Mese per mese</span><span class="lk"><span class="sw" style="background:var(--green)"></span>entrate <span class="sw" style="background:var(--red)"></span>uscite</span></div>
+    ${rows.map((c, i) => `<button class="row" style="border:0;background:none;padding:2px 0;text-align:left" onclick="S.mode='mese';S.m=${i};render()" aria-label="Apri ${MESI[i]}">
+      <span style="width:30px;font-size:12px;font-weight:700;color:var(--muted)">${MESI_B[i]}</span>
+      <span style="flex:1;display:flex;flex-direction:column;gap:3px">
+        <span style="height:7px;border-radius:999px;background:var(--green);width:${c.incasso / max * 100}%"></span>
+        <span style="height:7px;border-radius:999px;background:var(--red);width:${c.uscite / max * 100}%"></span></span>
+      <span style="width:84px;text-align:right;font-size:12px;font-weight:700;color:${c.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${eur0(c.netto)}</span></button>`).join('')}
+  </div>`;
+}
+
+function bookingRow(b) {
+  const d = parse(b.checkin);
+  const nights = b.checkout ? diffDays(b.checkin, b.checkout) : null;
+  const [tb, tf] = CH_TINT[isManual(b) ? 'diretta' : b.source];
+  return `<button class="item" onclick="openBooking('${b.id}')">
+    <div class="datebox"><span>${GG[d.getUTCDay()]}</span><b>${d.getUTCDate()}</b></div>
+    <div style="flex:1;min-width:0"><div class="t">${esc(b.guest_name || 'Ospite')} · ${PROP[b.property] || '?'}</div>
+      <div class="s">${nights ? nights + (nights === 1 ? ' notte' : ' notti') : 'check-out da completare'}${b.guests ? ' · ' + b.guests + ' ospiti' : ''}</div></div>
+    <span class="badge" style="background:${tb};color:${tf};font-size:11px;padding:5px 9px">${isManual(b) ? 'Manuale' : CANALE[b.source]}</span></button>`;
+}
+
+// ---------------- Movimenti ----------------
+function movements(r) {
+  const out = [];
+  S.data.bookings.forEach(b => {
+    if (!inR(b.checkin, r)) return;
+    if (b.status === 'confermata') out.push({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + (isManual(b) ? 'Manuale' : CANALE[b.source]), s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}${b.checkout ? ' · ' + diffDays(b.checkin, b.checkout) + ' notti' : ''}`, a: b.payout, missing: b.payout == null || !b.checkout, color: colorOf(b) });
+    else if (+b.payout > 0) out.push({ d: b.checkin, kind: 'in', b, t: 'Penale cancellazione', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: b.payout, color: '#9AA3AD' });
+    if (b.status === 'confermata' && +b.tourist_tax > 0) out.push({ d: b.checkin, kind: 'out', t: 'Tassa di soggiorno', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: +b.tourist_tax, color: '#8C7A5B', auto: 'AUTO' });
+  });
+  S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r)).forEach(b =>
+    out.push({ d: b.checkout, kind: 'out', b, t: 'Pulizia + biancheria', s: `${PROP[b.property]} · check-out ${esc(b.guest_name || '')}`, a: clean(b), color: '#1C6E85', auto: 'AUTO' }));
+  S.data.expenses.filter(x => inR(x.date, r)).forEach(x => { const c = CAT_SPESA[x.category] || CAT_SPESA.spese;
+    out.push({ d: x.date, kind: 'out', x, t: c.l, s: `${x.property === 'entrambe' ? 'Loft + Suite' : PROP[x.property]}${x.note ? ' · ' + esc(x.note) : ''}`, a: +x.amount, color: c.fg }); });
+  fixedOccurrences(r).forEach(f => out.push({ d: f.date, kind: 'out', f, t: f.name, s: PROP[f.property], a: +f.amount, color: '#5B3FA0', auto: 'FISSA' }));
+  if (S.mode === 'anno') S.data.adj.filter(a => inR(a.date, r)).forEach(a => out.push({ d: a.date, kind: a.amount >= 0 ? 'in' : 'out', t: 'Allineamento Airbnb', s: `${PROP[a.property]} · ${esc(a.note || '')}`, a: Math.abs(+a.amount), color: '#9AA3AD' }));
+  return out.sort((a, b) => b.d.localeCompare(a.d));
+}
+
+function viewMov() {
+  const r = range();
+  let list = movements(r);
+  const f = S.movFilter;
+  if (f === 'entrate') list = list.filter(x => x.kind === 'in');
+  if (f === 'uscite') list = list.filter(x => x.kind === 'out');
+  if (f === 'completare') list = S.data.bookings.filter(b => b.status === 'confermata' && (b.payout == null || !b.checkout))
+    .map(b => ({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + CANALE[b.source], s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}`, a: b.payout, missing: true, color: colorOf(b) })).sort((a, b) => b.d.localeCompare(a.d));
+  const totIn = list.filter(x => x.kind === 'in').reduce((s, x) => s + (+x.a || 0), 0), totOut = list.filter(x => x.kind === 'out').reduce((s, x) => s + (+x.a || 0), 0);
+  const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.movFilter='${k}';render()">${l}</button>`;
+  let html = header('Movimenti') + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
+    <button class="chip" onclick="go('fisse')">${ic('repeat', 14)} Spese fisse</button></div>
+    ${f !== 'completare' ? `<div class="grid2 mt"><div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Entrate</div><div style="font-size:20px;font-weight:800;color:var(--green-d)">${eur(totIn)}</div></div>
+    <div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Uscite</div><div style="font-size:20px;font-weight:800;color:var(--red-d)">${eur(totOut)}</div></div></div>` : ''}`;
+  if (!list.length) return html + `<div class="empty">Nessun movimento in ${periodName()}</div>`;
+  let last = '';
+  html += '<div>';
+  list.forEach(x => {
+    if (x.d !== last) { if (last) html += '</div>'; const d = parse(x.d); html += `<div class="daylab">${GG_L[d.getUTCDay()]} ${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</div><div class="list">`; last = x.d; }
+    const click = x.b ? `openBooking('${x.b.id}')` : x.x ? `openExpense('${x.x.id}')` : x.f ? `go('fisse')` : '';
+    html += `<button class="item" ${click ? `onclick="${click}"` : 'disabled style="opacity:1;cursor:default"'}>
+      <span class="dot" style="background:${x.color}"></span>
+      <div style="flex:1;min-width:0"><div class="t">${esc(x.t)}</div><div class="s">${x.s}${x.auto ? ` <span class="badge" style="background:#EEF0EC;color:var(--muted)">${x.auto}</span>` : ''}${x.missing ? ' <span class="badge" style="background:var(--amber-t);color:var(--amber-d)">DA COMPLETARE</span>' : ''}</div></div>
+      <span class="amt ${x.kind === 'in' ? 'plus' : 'minus'}">${x.a == null ? '—' : (x.kind === 'in' ? '+ ' : '− ') + eur(x.a)}</span></button>`;
+  });
+  return html + '</div></div>';
+}
+
+// ---------------- Calendario ----------------
+function viewCal() {
+  const y = S.y, m = S.m, first = isoOf(y, m, 1), dim = daysIn(y, m), lead = (dowOf(first) + 6) % 7;
+  const props = S.calProp === 'entrambe' ? ['loft', 'suite'] : [S.calProp];
+  const conf = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout);
+  const at = (p, iso) => conf.find(b => b.property === p && b.checkin <= iso && iso < b.checkout);
+  const barStyle = (p, iso, big) => {
+    const b = at(p, iso);
+    if (!b) return big ? '' : 'background:#EEF0EC';
+    const start = iso === b.checkin, end = addDays(iso, 1) === b.checkout, dw = dowOf(iso);
+    const l = start || dw === 1, rr = end || dw === 0;
+    return `background:${colorOf(b)};margin-left:${start ? 4 : 0}px;margin-right:${end ? 4 : 0}px;border-radius:${l ? 6 : 0}px ${rr ? 6 : 0}px ${rr ? 6 : 0}px ${l ? 6 : 0}px`;
+  };
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<span></span>';
+  for (let d = 1; d <= dim; d++) {
+    const iso = isoOf(y, m, d);
+    cells += `<button class="cell ${iso === S.calDay ? 'sel' : ''} ${iso === todayIso() ? 'today' : ''}" aria-label="${d} ${MESI[m]}" onclick="S.calDay='${iso}';render()">
+      <span class="n">${d}</span>${props.map(p => `<span class="b ${props.length === 1 ? 'big' : ''}" style="${barStyle(p, iso, props.length === 1)}"></span>`).join('')}</button>`;
+  }
+  const seg = (k, l) => `<button aria-pressed="${S.calProp === k}" onclick="S.calProp='${k}';render()">${l}</button>`;
+  const r = { from: first, to: m === 11 ? `${y + 1}-01-01` : isoOf(y, m + 1, 1) };
+  const nightsBy = { airbnb: 0, booking: 0, diretta: 0 };
+  conf.filter(b => props.includes(b.property)).forEach(b => { const s = b.checkin > r.from ? b.checkin : r.from, e = b.checkout < r.to ? b.checkout : r.to; const n = Math.max(0, diffDays(s, e)); nightsBy[isManual(b) ? 'diretta' : b.source] += n; });
+  // dettaglio giorno
+  const day = S.calDay;
+  let det = '';
+  props.forEach(p => {
+    const dentro = at(p, day), esce = conf.find(b => b.property === p && b.checkout === day);
+    if (esce && esce !== dentro) det += detRow(esce, PROP[p] + ' · check-out', '+1 pulizia', true);
+    if (dentro) det += detRow(dentro, PROP[p] + (dentro.checkin === day ? ' · check-in' : ' · occupato'));
+    if (!dentro && !esce) det += `<div class="item"><span class="dot" style="background:#E3E5E0"></span><div style="flex:1"><div class="s" style="font-weight:700;text-transform:none">${PROP[p]}</div><div class="t">Libero</div></div></div>`;
+  });
+  return `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Calendario</h1></div>
+    <div class="row" style="gap:4px"><button class="iconbtn" style="border:0;background:none" aria-label="Mese precedente" onclick="shiftMonth(-1)">${ic('left', 18)}</button>
+    <b style="font-size:15px;min-width:110px;text-align:center">${MESI[m]} ${y}</b>
+    <button class="iconbtn" style="border:0;background:none" aria-label="Mese successivo" onclick="shiftMonth(1)">${ic('right', 18)}</button></div></div>
+    <div class="seg">${seg('entrambe', 'Entrambe')}${seg('loft', 'Loft')}${seg('suite', 'Suite')}</div></header>
+    <section class="cal"><div class="dow"><span>LUN</span><span>MAR</span><span>MER</span><span>GIO</span><span>VEN</span><span>SAB</span><span>DOM</span></div>
+    <div class="grid">${cells}</div>
+    ${props.length === 2 ? '<p class="small muted" style="text-align:center;margin:8px 0 0">Barra sopra: Loft · barra sotto: Suite</p>' : ''}</section>
+    <div class="minis mt">${['airbnb', 'booking', 'diretta'].map(k => `<div class="mini" style="background:#fff;flex-direction:row;align-items:center;gap:8px"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:${CH_COL[k]}"></span><span style="font-size:12px;color:var(--ink)">${k === 'diretta' ? 'Manuali' : CANALE[k]} <span class="muted">${nightsBy[k]}</span></span></div>`).join('')}</div>
+    <p class="small muted" style="margin:6px 4px 0">Notti nel mese per canale</p>
+    <section class="mt2 stack" style="gap:10px"><h2 style="font-size:18px">${GG_L[dowOf(day)]} ${dLabel(day)}</h2><div class="list">${det}</div></section>`;
+}
+function detRow(b, lab, extra, outline) {
+  const n = diffDays(b.checkin, b.checkout);
+  return `<button class="item" onclick="openBooking('${b.id}')"><span class="dot" style="${outline ? 'border:2px solid ' + colorOf(b) : 'background:' + colorOf(b)}"></span>
+    <div style="flex:1;min-width:0"><div class="s" style="font-weight:700">${lab}</div><div class="t">${esc(b.guest_name || 'Ospite')}</div>
+    <div class="s">${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${dLabel(b.checkin)} – ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}${extra ? ' · ' + extra : ''}</div></div>
+    <span class="amt">${b.payout != null ? eur(b.payout) : ''}</span></button>`;
+}
+function shiftMonth(d) { S.m += d; if (S.m < 0) { S.m = 11; S.y--; } if (S.m > 11) { S.m = 0; S.y++; } S.calDay = isoOf(S.y, S.m, 1); render(); }
+
+// ---------------- Pulizie ----------------
+function viewPul() {
+  const r = range();
+  const all = S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r)).sort((a, b) => b.checkout.localeCompare(a.checkout));
+  const done = all.filter(b => b.checkout <= todayIso());
+  const paid = done.filter(b => b.cleaning_paid), due = done.filter(b => !b.cleaning_paid);
+  const sum = a => a.reduce((s, b) => s + clean(b), 0);
+  let list = all;
+  if (S.pulFilter === 'da') list = due; if (S.pulFilter === 'pagate') list = paid;
+  const chip = (k, l) => `<button class="chip" aria-pressed="${S.pulFilter === k}" onclick="S.pulFilter='${k}';render()">${l}</button>`;
+  return header('Pulizie') + `<div class="grid2">
+      <div style="background:var(--red-t);border-radius:18px;padding:14px 16px;color:var(--red-d)"><div class="small" style="font-weight:700">Da pagare · ${due.length}</div><div style="font-size:26px;font-weight:800">${eur0(sum(due))}</div></div>
+      <div style="background:var(--green-t);border-radius:18px;padding:14px 16px;color:var(--green-d)"><div class="small" style="font-weight:700">Pagate · ${paid.length}</div><div style="font-size:26px;font-weight:800">${eur0(sum(paid))}</div></div></div>
+    <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
+    <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
+    <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
+      <div class="card row" style="padding:12px 12px 12px 8px;${fut ? 'opacity:.6' : ''}">
+        <div class="datebox"><span>${GG[d.getUTCDay()]}</span><b>${d.getUTCDate()}</b></div>
+        <div style="flex:1;min-width:0"><div class="t" style="font-weight:700">${PROP[b.property]}</div><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.guest_name || 'Ospite')} · ${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${eur0(clean(b))}</div></div>
+        ${fut ? '<span class="prev">Prevista</span>' : `<button class="paybtn ${b.cleaning_paid ? 'ok' : 'no'}" aria-label="${b.cleaning_paid ? 'Pagata' : 'Da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}')">${ic(b.cleaning_paid ? 'check' : 'x', 16, 3)}${b.cleaning_paid ? 'Pagata' : 'Da pagare'}</button>`}
+      </div>`; }).join('') : `<div class="empty">Nessun check-out in ${periodName()}</div>`}</div>
+    ${due.length ? `<button class="btn green mt" onclick="payAll()">${ic('check', 18, 2.6)} Segna tutte come pagate (${due.length})</button>` : ''}`;
+}
+async function togglePaid(id) {
+  const b = S.data.bookings.find(x => x.id === id); const v = !b.cleaning_paid;
+  b.cleaning_paid = v; render();
+  const { error } = await sb.from('bookings').update({ cleaning_paid: v }).eq('id', id);
+  if (error) { b.cleaning_paid = !v; render(); toast('Non salvato: ' + error.message); }
+}
+async function payAll() {
+  const r = range();
+  const ids = S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r) && b.checkout <= todayIso() && !b.cleaning_paid).map(b => b.id);
+  const { error } = await sb.from('bookings').update({ cleaning_paid: true }).in('id', ids);
+  if (error) return toast('Non salvato: ' + error.message);
+  S.data.bookings.forEach(b => { if (ids.includes(b.id)) b.cleaning_paid = true; });
+  toast(ids.length + ' pulizie segnate come pagate'); render();
+}
+
+// ---------------- Spese fisse ----------------
+function viewFisse() {
+  const act = S.data.fixed.filter(f => !f.end_month || f.end_month >= isoOf(now.getFullYear(), now.getMonth(), 1));
+  const tot = p => act.filter(f => f.property === p).reduce((s, f) => s + +f.amount, 0);
+  return `<header class="top"><div class="row"><button class="iconbtn" aria-label="Indietro" onclick="go('mov')">${ic('left', 18)}</button><h1>Spese fisse</h1></div>
+    <span class="small muted">Tolte ogni mese nel giorno indicato</span></header>
+    <section class="card grid2" style="background:var(--ink);color:#fff;grid-template-columns:repeat(3,1fr)">
+      <div><div class="small" style="color:#A9B3BC">Loft</div><b style="font-size:18px">${eur0(tot('loft'))}</b></div>
+      <div><div class="small" style="color:#A9B3BC">Suite</div><b style="font-size:18px">${eur0(tot('suite'))}</b></div>
+      <div><div class="small" style="color:#A9B3BC">Totale/mese</div><b style="font-size:18px;color:#FFA79C">${eur0(tot('loft') + tot('suite'))}</b></div></section>
+    ${['loft', 'suite'].map(p => `<div class="daylab">Antrum ${PROP[p]}</div><div class="list">${act.filter(f => f.property === p).map(f => `
+      <button class="item" onclick="openFixed('${f.id}')"><span class="dot" style="background:#5B3FA0"></span>
+      <div style="flex:1"><div class="t">${esc(f.name)}</div><div class="s">ogni mese · giorno ${f.day_of_month}</div></div><span class="amt">${eur(f.amount)}</span></button>`).join('') || '<div class="empty">Nessuna spesa fissa</div>'}</div>`).join('')}
+    <button class="btn mt2" onclick="openFixed()">${ic('plus', 18, 2.4)} Aggiungi spesa fissa</button>`;
+}
+
+// =====================================================================
+// Sheet: prenotazione / spesa / nuovo / fissa
+// =====================================================================
+function sheet(html) {
+  closeSheet();
+  const o = document.createElement('div'); o.className = 'overlay'; o.id = 'ov';
+  o.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  o.addEventListener('click', e => { if (e.target === o) closeSheet(); });
+  document.body.appendChild(o);
+  const f = o.querySelector('input,select,button'); if (f) f.focus();
+}
+function closeSheet() { const o = $('#ov'); if (o) o.remove(); }
+const sheetHead = t => `<div class="between" style="margin-bottom:16px"><h2 style="font-size:22px;font-weight:800">${t}</h2><button class="iconbtn" aria-label="Chiudi" onclick="closeSheet()">${ic('x', 18)}</button></div>`;
+const propSel = (v, entrambe) => `<select id="f_prop"><option value="loft" ${v === 'loft' ? 'selected' : ''}>Loft</option><option value="suite" ${v === 'suite' ? 'selected' : ''}>Suite</option>${entrambe ? `<option value="entrambe" ${v === 'entrambe' ? 'selected' : ''}>Entrambe (metà ciascuna)</option>` : ''}</select>`;
+
+function openBooking(id) {
+  const b = S.data.bookings.find(x => x.id === id);
+  const from = isManual(b) ? 'Inserita a mano' : (b.email_id ? 'Letta dalla mail ' : 'Dal calendario ') + CANALE[b.source];
+  sheet(sheetHead(esc(b.guest_name || 'Prenotazione')) + `
+    <p class="small muted" style="margin:-8px 0 16px">${from} · codice ${esc(b.code)}${b.status === 'cancellata' ? ' · <b style="color:var(--red-d)">CANCELLATA</b>' : ''}</p>
+    <div class="stack">
+      <label class="field">Importo incassato<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.payout != null ? String(b.payout).replace('.', ',') : ''}" placeholder="0,00"></div></label>
+      <div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${b.checkin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${b.checkout || ''}"></label></div>
+      <div class="grid2"><label class="field">Struttura${propSel(b.property)}</label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${b.guests ?? ''}"></label></div>
+      <label class="field">Nome ospite<input id="f_name" value="${esc(b.guest_name || '')}"></label>
+      <label class="field">Note<textarea id="f_note">${esc(b.note || '')}</textarea></label>
+      ${b.guest_total != null ? `<p class="small muted" style="margin:0">L'ospite ha pagato ${eur(b.guest_total)} · tassa di soggiorno ${eur(b.tourist_tax)}</p>` : ''}
+      <button class="btn" onclick="saveBooking('${b.id}')">Salva</button>
+      ${b.manual && !b.email_id ? `<button class="btn ghost" onclick="delBooking('${b.id}')">Elimina prenotazione</button>` : ''}
+    </div>`);
+}
+async function saveBooking(id) {
+  const amt = $('#f_amt').value.trim();
+  const upd = { payout: amt === '' ? null : num(amt), checkin: $('#f_in').value, checkout: $('#f_out').value || null, property: $('#f_prop').value,
+    guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_name: $('#f_name').value.trim() || null, note: $('#f_note').value.trim() || null };
+  if (upd.checkout && upd.checkout <= upd.checkin) return toast('Il check-out deve essere dopo il check-in');
+  const { error } = await sb.from('bookings').update(upd).eq('id', id);
+  if (error) return toast('Non salvato: ' + error.message);
+  Object.assign(S.data.bookings.find(b => b.id === id), upd);
+  closeSheet(); toast('Prenotazione salvata'); render();
+}
+async function delBooking(id) {
+  if (!confirm('Eliminare questa prenotazione?')) return;
+  const { error } = await sb.from('bookings').delete().eq('id', id);
+  if (error) return toast('Non eliminata: ' + error.message);
+  S.data.bookings = S.data.bookings.filter(b => b.id !== id); closeSheet(); toast('Prenotazione eliminata'); render();
+}
+
+function openExpense(id) {
+  const x = S.data.expenses.find(e => e.id === id);
+  sheet(sheetHead('Spesa') + `<div class="stack">
+    <label class="field">Importo<div class="money" style="border-color:var(--red)"><span style="color:var(--red)">€</span><input id="f_amt" inputmode="decimal" value="${String(x.amount).replace('.', ',')}"></div></label>
+    <div class="grid2"><label class="field">Categoria<select id="f_cat">${Object.entries(CAT_SPESA).map(([k, c]) => `<option value="${k}" ${k === x.category ? 'selected' : ''}>${c.l}</option>`).join('')}</select></label>
+    <label class="field">Data<input id="f_date" type="date" value="${x.date}"></label></div>
+    <label class="field">Struttura${propSel(x.property, true)}</label>
+    <label class="field">Nota<input id="f_note" value="${esc(x.note || '')}"></label>
+    <button class="btn" onclick="saveExpense('${id}')">Salva</button>
+    <button class="btn ghost" onclick="delExpense('${id}')">Elimina spesa</button></div>`);
+}
+async function saveExpense(id) {
+  const upd = { amount: num($('#f_amt').value), category: $('#f_cat').value, date: $('#f_date').value, property: $('#f_prop').value, note: $('#f_note').value.trim() || null };
+  if (!upd.amount) return toast('Inserisci un importo');
+  const { error } = await sb.from('expenses').update(upd).eq('id', id);
+  if (error) return toast('Non salvato: ' + error.message);
+  Object.assign(S.data.expenses.find(e => e.id === id), upd); closeSheet(); toast('Spesa salvata'); render();
+}
+async function delExpense(id) {
+  if (!confirm('Eliminare questa spesa?')) return;
+  const { error } = await sb.from('expenses').delete().eq('id', id);
+  if (error) return toast('Non eliminata: ' + error.message);
+  S.data.expenses = S.data.expenses.filter(e => e.id !== id); closeSheet(); toast('Spesa eliminata'); render();
+}
+
+let N = {};
+function openNuovo(tipo = 'spesa') {
+  N = { tipo, cat: tipo === 'spesa' ? 'spese' : 'diretta', prop: tipo === 'spesa' ? 'entrambe' : 'loft' };
+  drawNuovo();
+}
+function drawNuovo() {
+  const sp = N.tipo === 'spesa', acc = sp ? 'var(--red)' : 'var(--green)';
+  const cats = sp ? Object.entries(CAT_SPESA).map(([k, c]) => ({ k, l: c.l, i: c.i, bg: c.bg, fg: c.fg }))
+    : [{ k: 'airbnb', l: 'Prenotazione Airbnb', i: 'cal', bg: '#FFF4D0', fg: '#6B4E00' }, { k: 'booking', l: 'Prenotazione Booking', i: 'cal', bg: '#DCE8FA', fg: '#0B3F8A' }, { k: 'diretta', l: 'Prenotazione diretta', i: 'cash', bg: '#E2F3E8', fg: '#17633A' }];
+  const keep = id => { const el = $('#' + id); return el ? el.value : ''; };
+  const v = { amt: keep('f_amt'), date: keep('f_date') || todayIso(), note: keep('f_note'), cin: keep('f_in') || todayIso(), cout: keep('f_out'), name: keep('f_name'), guests: keep('f_guests') };
+  sheet(sheetHead(sp ? 'Nuova spesa' : 'Nuova entrata') + `<div class="stack" style="gap:18px">
+    <div class="seg"><button aria-pressed="${sp}" onclick="N.tipo='spesa';N.cat='spese';N.prop='entrambe';drawNuovo()">Spesa</button><button aria-pressed="${!sp}" onclick="N.tipo='entrata';N.cat='diretta';N.prop='loft';drawNuovo()">Entrata</button></div>
+    <label class="field">Importo<div class="money" style="border-color:${acc}"><span style="color:${acc}">€</span><input id="f_amt" inputmode="decimal" placeholder="0,00" value="${esc(v.amt)}"></div></label>
+    <div class="field">Categoria<div class="cats" ${sp ? '' : 'style="grid-template-columns:repeat(3,1fr)"'}>${cats.map(c => `<button class="cat" aria-pressed="${N.cat === c.k}" onclick="N.cat='${c.k}';drawNuovo()"><span class="ic" style="background:${c.bg};color:${c.fg}">${ic(c.i)}</span>${c.l}</button>`).join('')}</div></div>
+    <div class="field">Struttura<div class="seg">${['loft', 'suite'].concat(sp ? ['entrambe'] : []).map(p => `<button aria-pressed="${N.prop === p}" onclick="N.prop='${p}';drawNuovo()">${p === 'entrambe' ? 'Entrambe ½' : PROP[p]}</button>`).join('')}</div></div>
+    ${sp ? `<div class="grid2"><label class="field">Data<input id="f_date" type="date" value="${v.date}"></label><label class="field">Nota<input id="f_note" value="${esc(v.note)}" placeholder="facoltativa"></label></div>
+      <label class="check"><input type="checkbox" id="f_rep"><span style="flex:1">Ripeti ogni mese<br><span class="small muted" style="font-weight:500">La salva tra le spese fisse</span></span></label>`
+    : `<div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${v.cin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${v.cout}"></label></div>
+      <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(v.name)}"></label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${esc(v.guests)}"></label></div>`}
+    <button class="btn" style="background:${acc}" onclick="saveNuovo()">Salva</button></div>`);
+}
+async function saveNuovo() {
+  const amount = num($('#f_amt').value);
+  if (!amount) return toast('Inserisci un importo');
+  if (N.tipo === 'spesa') {
+    if ($('#f_rep').checked) {
+      const d = $('#f_date').value, day = +d.slice(8), sm = d.slice(0, 8) + '01';
+      const name = (CAT_SPESA[N.cat].l) + ($('#f_note').value ? ' · ' + $('#f_note').value : '');
+      const rows = N.prop === 'entrambe' ? ['loft', 'suite'].map(p => ({ name, category: N.cat, property: p, amount: Math.round(amount / 2 * 100) / 100, day_of_month: day, start_month: sm }))
+        : [{ name, category: N.cat, property: N.prop, amount, day_of_month: day, start_month: sm }];
+      const { data, error } = await sb.from('fixed_expenses').insert(rows).select();
+      if (error) return toast('Non salvata: ' + error.message);
+      S.data.fixed.push(...data); closeSheet(); toast('Spesa fissa aggiunta'); return render();
+    }
+    const row = { amount, category: N.cat, property: N.prop, date: $('#f_date').value, note: $('#f_note').value.trim() || null };
+    const { data, error } = await sb.from('expenses').insert(row).select();
+    if (error) return toast('Non salvata: ' + error.message);
+    S.data.expenses.push(data[0]); closeSheet(); toast('Spesa salvata'); return render();
+  }
+  const cin = $('#f_in').value, cout = $('#f_out').value;
+  if (!cout || cout <= cin) return toast('Inserisci un check-out dopo il check-in');
+  const row = { source: N.cat, code: 'M-' + Date.now(), manual: true, property: N.prop, checkin: cin, checkout: cout, payout: amount,
+    guest_name: $('#f_name').value.trim() || null, guests: $('#f_guests').value ? +$('#f_guests').value : null, status: 'confermata' };
+  const { data, error } = await sb.from('bookings').insert(row).select();
+  if (error) return toast('Non salvata: ' + error.message);
+  S.data.bookings.push(data[0]); S.data.bookings.sort((a, b) => a.checkin.localeCompare(b.checkin));
+  closeSheet(); toast('Prenotazione salvata'); render();
+}
+
+function openFixed(id) {
+  const f = id ? S.data.fixed.find(x => x.id === id) : { name: '', property: 'loft', amount: '', day_of_month: 1, category: 'spese' };
+  sheet(sheetHead(id ? 'Spesa fissa' : 'Nuova spesa fissa') + `<div class="stack">
+    <label class="field">Nome<input id="f_name" value="${esc(f.name)}" placeholder="es. Mutuo, Luce"></label>
+    <label class="field">Importo mensile<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${f.amount !== '' ? String(f.amount).replace('.', ',') : ''}"></div></label>
+    <div class="grid2"><label class="field">Struttura${propSel(f.property)}</label><label class="field">Giorno del mese<input id="f_day" inputmode="numeric" value="${f.day_of_month}"></label></div>
+    <button class="btn" onclick="saveFixed(${id ? `'${id}'` : ''})">Salva</button>
+    ${id ? `<button class="btn ghost" onclick="endFixed('${id}')">Non pagarla più da questo mese</button>` : ''}</div>`);
+}
+async function saveFixed(id) {
+  const row = { name: $('#f_name').value.trim(), amount: num($('#f_amt').value), property: $('#f_prop').value, day_of_month: Math.min(31, Math.max(1, +$('#f_day').value || 1)) };
+  if (!row.name || !row.amount) return toast('Inserisci nome e importo');
+  if (id) {
+    // Cambio importo: le mensilità passate restano col vecchio valore
+    const old = S.data.fixed.find(f => f.id === id), thisM = isoOf(now.getFullYear(), now.getMonth(), 1);
+    if (+old.amount !== row.amount && old.start_month < thisM) {
+      const prevM = isoOf(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(), (now.getMonth() + 11) % 12, 1);
+      const a = await sb.from('fixed_expenses').update({ end_month: prevM }).eq('id', id);
+      const b = await sb.from('fixed_expenses').insert({ ...row, category: old.category, start_month: thisM }).select();
+      if (a.error || b.error) return toast('Non salvata: ' + (a.error || b.error).message);
+      old.end_month = prevM; S.data.fixed.push(b.data[0]);
+    } else {
+      const { error } = await sb.from('fixed_expenses').update(row).eq('id', id);
+      if (error) return toast('Non salvata: ' + error.message);
+      Object.assign(S.data.fixed.find(f => f.id === id), row);
+    }
+  } else {
+    const { data, error } = await sb.from('fixed_expenses').insert({ ...row, start_month: isoOf(now.getFullYear(), now.getMonth(), 1) }).select();
+    if (error) return toast('Non salvata: ' + error.message);
+    S.data.fixed.push(data[0]);
+  }
+  closeSheet(); toast('Spesa fissa salvata'); render();
+}
+async function endFixed(id) {
+  const prevM = isoOf(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(), (now.getMonth() + 11) % 12, 1);
+  const { error } = await sb.from('fixed_expenses').update({ end_month: prevM }).eq('id', id);
+  if (error) return toast('Non salvata: ' + error.message);
+  S.data.fixed.find(f => f.id === id).end_month = prevM; closeSheet(); toast('Spesa fissa terminata'); render();
+}
+
+// =====================================================================
+// Navigazione, login, avvio
+// =====================================================================
+function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
+function render() {
+  const v = { home: viewHome, cal: viewCal, mov: viewMov, pul: viewPul, fisse: viewFisse }[S.tab]();
+  $('#root').innerHTML = `<div class="app"><main>${v}
+    <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
+}
+async function refresh() { try { await loadData(); render(); toast('Dati aggiornati'); } catch (e) { toast('Errore: ' + e.message); } }
+
+let pin = '';
+function loginView(msg = '') {
+  $('#root').innerHTML = `<div class="login"><img src="icon-192.png" alt=""><div><h1 style="font-size:24px">Antrum Loft &amp; Suite</h1><p style="color:#A9B3BC;margin:6px 0 0">Inserisci il PIN</p></div>
+    <div class="pin" aria-label="PIN inserito: ${pin.length} cifre su ${PIN_LEN}">${Array.from({ length: PIN_LEN }, (_, i) => `<span class="${i < pin.length ? 'on' : ''}"></span>`).join('')}</div>
+    <div class="err" role="alert">${msg}</div>
+    <div class="keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button onclick="key('${n}')">${n}</button>`).join('')}<span></span><button onclick="key('0')">0</button><button class="t" aria-label="Cancella" onclick="key('del')">Canc</button></div></div>`;
+}
+async function key(k) {
+  if (k === 'del') pin = pin.slice(0, -1); else if (pin.length < PIN_LEN) pin += k;
+  loginView();
+  if (pin.length === PIN_LEN) {
+    const { error } = await sb.auth.signInWithPassword({ email: LOGIN_EMAIL, password: pin });
+    pin = '';
+    if (error) return loginView(/rate|many/i.test(error.message) ? 'Troppi tentativi, riprova tra qualche minuto' : 'PIN errato');
+    start();
+  }
+}
+document.addEventListener('keydown', e => { if ($('.login')) { if (/^\d$/.test(e.key)) key(e.key); if (e.key === 'Backspace') key('del'); } if (e.key === 'Escape') closeSheet(); });
+async function logout() { await sb.auth.signOut(); loginView(); }
+async function start() {
+  $('#root').innerHTML = '<div class="empty" style="padding-top:40vh">Caricamento…</div>';
+  try { await loadData(); render(); }
+  catch (e) { if (/JWT|auth/i.test(e.message)) return loginView(); $('#root').innerHTML = `<div class="empty" style="padding-top:35vh">Impossibile caricare i dati: ${esc(e.message)}<br><br><button class="btn" style="width:auto;padding:0 24px" onclick="start()">Riprova</button></div>`; }
+}
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (data.session) start(); else loginView();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>
