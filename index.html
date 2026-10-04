@@ -247,6 +247,9 @@ const dowOf = iso => parse(iso).getUTCDay();
 const dLabel = iso => { const d = parse(iso); return d.getUTCDate() + ' ' + MESI_B[d.getUTCMonth()]; };
 const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? null : n; };
 const isManual = b => b.source === 'diretta' || (b.manual && !b.email_id);
+// Ritenuta fiscale Airbnb (cedolare 21%): valore esatto dalla mail di pagamento, altrimenti stima 22% di (incasso − tassa)
+const ritenuta = b => b.source !== 'airbnb' || !(+b.payout > 0) ? 0 : b.withholding != null ? +b.withholding : Math.round((+b.payout - (+b.tourist_tax || 0)) * 22) / 100;
+const ritStimata = b => b.source === 'airbnb' && +b.payout > 0 && b.withholding == null;
 const colorOf = b => isManual(b) ? CH_COL.diretta : CH_COL[b.source];
 const pul = b => +(b.cleaning_cost ?? 20);   // solo pulizia
 const lin = b => +(b.linen_cost ?? 7);       // solo biancheria
@@ -307,7 +310,7 @@ function fixedOccurrences(r) {
 }
 
 function calc(r) {
-  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaMat: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
+  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaMat: 0, rit: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
   const t = { ...P(), loft: P(), suite: P(), ch: { airbnb: 0, booking: 0, diretta: 0 }, mancanti: [] };
   const add = (prop, k, v) => { t[k] += v; if (prop === 'entrambe') { t.loft[k] += v / 2; t.suite[k] += v / 2; } else if (t[prop]) t[prop][k] += v; };
   S.data.bookings.forEach(b => {
@@ -320,8 +323,9 @@ function calc(r) {
         add(p, 'lordo', +(b.guest_total ?? b.payout) || 0);
         if (b.guest_total != null && b.payout != null) add(p, 'comm', b.guest_total - b.payout);
         add(p, 'tassa', +b.tourist_tax || 0);
+        add(p, 'rit', ritenuta(b));
       } else if (+b.payout > 0) {   // cancellata con penale
-        add(p, 'incasso', +b.payout); add(p, 'lordo', +b.payout);
+        add(p, 'incasso', +b.payout); add(p, 'lordo', +b.payout); add(p, 'rit', ritenuta(b));
       }
     }
     if (b.status === 'confermata' && b.checkout && b.checkout >= r.from && b.checkout <= r.to && inR(b.checkout, r)) {
@@ -340,7 +344,7 @@ function calc(r) {
   ['loft', 'suite', null].forEach(k => {
     const o = k ? t[k] : t;
     // la tassa di soggiorno incassata NON è un'uscita automatica: la scali tu a mano (Spesa → Tassa di soggiorno) quando la versi
-    o.uscite = o.fisse + o.pulizie + o.spese;
+    o.uscite = o.rit + o.fisse + o.pulizie + o.spese;
     o.netto = o.incasso - o.uscite;
   });
   t.days = r.days;
@@ -397,7 +401,7 @@ function viewHome() {
   </section>`;
 
   if (S.open === 'guadagno') {
-    const parts = [['Commissioni portali', c.comm, '#9AA3AD'], ['Spese fisse', c.fisse, '#121A21'], ['Pulizie + biancheria', c.pulizie, '#1C6E85'], ['Spese manuali', c.spese, '#C2362B']];
+    const parts = [['Commissioni portali', c.comm, '#9AA3AD'], ['Ritenuta Airbnb 21%', c.rit, '#6B5B95'], ['Spese fisse', c.fisse, '#121A21'], ['Pulizie + biancheria', c.pulizie, '#1C6E85'], ['Spese manuali', c.spese, '#C2362B']];
     html += `<section class="card mt stack" style="gap:14px"><div class="between"><h2>Dal lordo al netto</h2><span class="small muted">${periodName()}</span></div>
       <div class="bar">${parts.map(p => p[1] > 0 ? `<div style="flex:${p[1]};background:${p[2]}"></div>` : '').join('')}${c.netto > 0 ? `<div style="flex:${c.netto};background:var(--green)"></div>` : ''}</div>
       <div><div class="ln b"><span>Pagato dagli ospiti</span><span>${meur(c.lordo)}</span></div>
@@ -419,6 +423,7 @@ function viewHome() {
       <div class="grid2" style="gap:6px 16px;font-size:13px;color:var(--text2)">
         <span>Spese fisse</span><span style="text-align:right">${meur(p.fisse)}</span>
         <span>Pulizie (${p.nPulizie})</span><span style="text-align:right">${meur(p.pulizie)}</span>
+        <span>Ritenuta Airbnb 21%</span><span style="text-align:right">${meur(p.rit)}</span>
         <span>Tassa di soggiorno versata</span><span style="text-align:right">${meur(p.tassaVers)}</span>
         <span>Altre spese manuali</span><span style="text-align:right">${meur(p.spese - p.tassaVers)}</span></div>
       ${p.tassaMat ? `<span class="small muted">Tassa di soggiorno maturata (da versare a parte): ${meur(p.tassaMat)}</span>` : ''}</div>`; }).join('')}</section>`;
@@ -531,7 +536,7 @@ function viewPer() {
   const mesi = [];
   for (let k = from; k <= to; k++) { const r = monthRange(k), c = calc(r); mesi.push({ k, r, c: pick(c), ch: perCanali(r, P.prop) }); }
   const sum = f => mesi.reduce((a, m) => a + f(m), 0);
-  const tot = { inn: sum(m => m.c.incasso), out: sum(m => m.c.uscite), fisse: sum(m => m.c.fisse), pul: sum(m => m.c.pulizie), nPul: sum(m => m.c.nPulizie),
+  const tot = { rit: sum(m => m.c.rit), inn: sum(m => m.c.incasso), out: sum(m => m.c.uscite), fisse: sum(m => m.c.fisse), pul: sum(m => m.c.pulizie), nPul: sum(m => m.c.nPulizie),
     tassa: sum(m => m.c.tassaVers), spese: sum(m => m.c.spese - m.c.tassaVers), notti: sum(m => m.c.notti), pren: sum(m => m.c.pren),
     air: sum(m => m.ch.airbnb), book: sum(m => m.ch.booking), dir: sum(m => m.ch.diretta) };
   tot.netto = tot.inn - tot.out;
@@ -575,7 +580,7 @@ function viewPer() {
       <div class="ln sep" style="padding:8px 0 0;font-size:13px"><span>Notti</span><b style="color:var(--ink)">${tot.notti}</b></div>
       <div class="ln" style="padding:4px 0 0;font-size:13px"><span>Prenotazioni</span><b style="color:var(--ink)">${tot.pren}</b></div></div>
     <div class="card" style="padding:16px"><h2 style="font-size:15px;margin-bottom:6px">Uscite</h2>
-      ${line('Spese fisse', tot.fisse)}${line(`Pulizie (${tot.nPul})`, tot.pul)}${line('Tassa versata', tot.tassa)}${line('Altre spese', tot.spese)}</div>
+      ${line('Ritenuta Airbnb', tot.rit)}${line('Spese fisse', tot.fisse)}${line(`Pulizie (${tot.nPul})`, tot.pul)}${line('Tassa versata', tot.tassa)}${line('Altre spese', tot.spese)}</div>
   </section>`;
   if (Math.abs(tot.air + tot.book + tot.dir - tot.inn) > 1) html += `<p class="small muted" style="margin:10px 4px 0">Le entrate includono penali di cancellazione o rettifiche non attribuite a un canale.</p>`;
 
@@ -607,6 +612,7 @@ function movements(r) {
     if (!inR(b.checkin, r)) return;
     if (b.status === 'confermata') out.push({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + (isManual(b) ? 'Manuale' : CANALE[b.source]), s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}${b.checkout ? ' · ' + diffDays(b.checkin, b.checkout) + ' notti' : ''}`, a: b.payout, missing: b.payout == null || !b.checkout, color: colorOf(b) });
     else if (+b.payout > 0) out.push({ d: b.checkin, kind: 'in', b, t: 'Penale cancellazione', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: b.payout, color: '#9AA3AD' });
+    if (ritenuta(b) > 0) out.push({ d: b.checkin, kind: 'out', b, t: 'Ritenuta fiscale Airbnb 21%', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: ritenuta(b), color: '#6B5B95', auto: ritStimata(b) ? 'STIMA' : 'AIRBNB' });
   });
   S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r)).forEach(b =>
     out.push({ d: b.checkout, kind: 'out', b, t: 'Pulizia + biancheria', s: `${PROP[b.property]} · check-out ${esc(b.guest_name || '')}`, a: clean(b), color: '#1C6E85', auto: 'AUTO' }));
