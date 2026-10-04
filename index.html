@@ -305,7 +305,7 @@ function fixedOccurrences(r) {
 }
 
 function calc(r) {
-  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
+  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaMat: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
   const t = { ...P(), loft: P(), suite: P(), ch: { airbnb: 0, booking: 0, diretta: 0 }, mancanti: [] };
   const add = (prop, k, v) => { t[k] += v; if (prop === 'entrambe') { t.loft[k] += v / 2; t.suite[k] += v / 2; } else if (t[prop]) t[prop][k] += v; };
   S.data.bookings.forEach(b => {
@@ -325,6 +325,7 @@ function calc(r) {
     if (b.status === 'confermata' && b.checkout && b.checkout >= r.from && b.checkout <= r.to && inR(b.checkout, r)) {
       add(p, 'pulizie', clean(b)); add(p, 'nPulizie', 1);
     }
+    if (b.status === 'confermata') add(p, 'tassaMat', tassaNotti(b, r.from, r.to));
     if (b.status === 'confermata' && b.checkout) {
       const s = b.checkin > r.from ? b.checkin : r.from, e = b.checkout < r.to ? b.checkout : r.to;
       const n = Math.max(0, diffDays(s, e));
@@ -403,7 +404,7 @@ function viewHome() {
       <div class="ln b sep"><span>Incassato</span><span>${meur(c.incasso)}</span></div>
       ${parts.slice(1).map(p => `<div class="ln"><span class="lk"><span class="sw" style="background:${p[2]}"></span>${p[0]}</span><span>− ${meur(p[1])}</span></div>`).join('')}
       <div class="netbox ${c.netto < 0 ? 'neg' : ''}"><span class="lk" style="font-weight:700">Netto</span><strong>${meur(c.netto)}</strong></div></div>
-      ${c.tassa || c.tassaVers ? `<p class="small muted" style="margin:0">Tassa di soggiorno incassata ${meur(c.tassa)} · versata ${meur(c.tassaVers)}. Si scala solo quando la inserisci tu come spesa.</p>` : ''}
+      ${c.tassaMat || c.tassaVers ? `<p class="small muted" style="margin:0">Tassa di soggiorno maturata nel periodo (3 € a persona per notte) ${meur(c.tassaMat)} · versata ${meur(c.tassaVers)}. Si scala solo quando la inserisci tu come spesa.</p>` : ''}
       ${c.mancanti.length ? `<p class="small muted" style="margin:0">${c.mancanti.length} prenotazion${c.mancanti.length > 1 ? 'i' : 'e'} senza importo non ${c.mancanti.length > 1 ? 'sono' : 'è'} nei conti.</p>` : ''}
       ${S.mode === 'anno' ? annualBars() : ''}
     </section>`;
@@ -418,7 +419,7 @@ function viewHome() {
         <span>Pulizie (${p.nPulizie})</span><span style="text-align:right">${meur(p.pulizie)}</span>
         <span>Tassa di soggiorno versata</span><span style="text-align:right">${meur(p.tassaVers)}</span>
         <span>Altre spese manuali</span><span style="text-align:right">${meur(p.spese - p.tassaVers)}</span></div>
-      ${p.tassa ? `<span class="small muted">Tassa di soggiorno incassata (da versare a parte): ${meur(p.tassa)}</span>` : ''}</div>`; }).join('')}</section>`;
+      ${p.tassaMat ? `<span class="small muted">Tassa di soggiorno maturata (da versare a parte): ${meur(p.tassaMat)}</span>` : ''}</div>`; }).join('')}</section>`;
   }
   if (S.open === 'notti') {
     html += `<section class="card mt stack" style="gap:18px"><h2>Notti per struttura</h2>
@@ -434,6 +435,10 @@ function viewHome() {
   // da completare
   const todo = S.data.bookings.filter(b => b.status === 'confermata' && (b.payout == null || !b.checkout) && b.checkin >= addDays(todayIso(), -60));
   if (todo.length) html += `<button class="alert mt" onclick="go('mov');S.movFilter='completare';render()">${ic('alert')}<span style="flex:1"><b>${todo.length} prenotazion${todo.length > 1 ? 'i' : 'e'} da completare</b> · manca importo o check-out</span><b>Apri</b></button>`;
+
+  // tassa di soggiorno del trimestre appena chiuso
+  const tq = tassaTrimestre(), resto = Math.round((tq.dovuta - tq.versata) * 100) / 100;
+  if (resto > 0.5) html += `<button class="alert mt" onclick="versaTassa(${resto})">${ic('bank')}<span style="flex:1"><b>Tassa di soggiorno da versare · ${meur(resto)}</b><br>${tq.nome}: Loft ${meur(tq.loft)} · Suite ${meur(tq.suite)}${tq.versata ? ' · già versati ' + meur(tq.versata) : ''}${tq.senzaDati.length ? ` · ${tq.senzaDati.length} prenotazion${tq.senzaDati.length > 1 ? 'i' : 'e'} senza ospiti o check-out non incluse` : ''}</span></button>`;
 
   // prossimi arrivi
   const next = S.data.bookings.filter(b => b.status === 'confermata' && b.checkin >= todayIso()).slice(0, 4);
@@ -469,6 +474,38 @@ function bookingRow(b) {
     <div style="flex:1;min-width:0"><div class="t">${esc(b.guest_name || 'Ospite')} · ${PROP[b.property] || '?'}</div>
       <div class="s">${nights ? nights + (nights === 1 ? ' notte' : ' notti') : 'check-out da completare'}${b.guests ? ' · ' + b.guests + ' ospiti' : ''}</div></div>
     <span class="badge" style="background:${tb};color:${tf};font-size:11px;padding:5px 9px">${isManual(b) ? 'Manuale' : CANALE[b.source]}</span></button>`;
+}
+
+
+// ---------------- Tassa di soggiorno trimestrale ----------------
+// 3 € a persona per notte. Le notti prima del 1/10/2026 sono già state versate: non si contano.
+const TASSA_EURO = 3, TASSA_DAL = '2026-10-01';
+const tariffa = iso => iso < TASSA_DAL ? 0 : TASSA_EURO;
+// tassa maturata per le notti di una prenotazione dentro [from, to)
+const tassaNotti = (b, from, to) => { let v = 0; if (!b.checkout || !b.guests) return 0;
+  for (let d = b.checkin > from ? b.checkin : from, e = b.checkout < to ? b.checkout : to; d < e; d = addDays(d, 1)) v += b.guests * tariffa(d);
+  return v; };
+const MESI_BREVI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+// Trimestre appena chiuso: per ogni notte dentro il trimestre, ospiti × tariffa del giorno. Versamenti = spese "Tassa di soggiorno" del trimestre in corso.
+function tassaTrimestre() {
+  const t = parse(todayIso()), y = t.getUTCFullYear(), q0 = Math.floor(t.getUTCMonth() / 3) * 3;
+  const from = new Date(Date.UTC(y, q0 - 3, 1)).toISOString().slice(0, 10), to = new Date(Date.UTC(y, q0, 1)).toISOString().slice(0, 10);
+  const nextTo = new Date(Date.UTC(y, q0 + 3, 1)).toISOString().slice(0, 10);
+  const r = { from, to, loft: 0, suite: 0, dovuta: 0, versata: 0, senzaDati: [] };
+  S.data.bookings.forEach(b => {
+    if (b.status !== 'confermata' || b.checkin >= to || (b.checkout && b.checkout <= from)) return;
+    if (!b.checkout || !b.guests) { if ((b.checkout || b.checkin) >= TASSA_DAL) r.senzaDati.push(b); return; }
+    if (r[b.property] == null) return;
+    const v = tassaNotti(b, from, to); r[b.property] += v; r.dovuta += v;
+  });
+  r.versata = S.data.expenses.filter(x => x.category === 'tassa_soggiorno' && x.date >= to && x.date < nextTo).reduce((a, x) => a + +x.amount, 0);
+  const f = parse(from);
+  r.nome = MESI_BREVI[f.getUTCMonth()] + '–' + MESI_BREVI[(f.getUTCMonth() + 2) % 12] + ' ' + f.getUTCFullYear();
+  return r;
+}
+function versaTassa(importo) {
+  openNuovo('spesa'); N.cat = 'tassa_soggiorno'; N.prop = 'entrambe'; drawNuovo();
+  const a = $('#f_amt'); if (a) a.value = String(importo.toFixed(2)).replace('.', ',');
 }
 
 // ---------------- Movimenti ----------------
