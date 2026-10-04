@@ -227,8 +227,11 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let HIDE = (() => { try { return localStorage.getItem('antrum-hide') === '1'; } catch (e) { return false; } })();
 function toggleHide() { HIDE = !HIDE; try { localStorage.setItem('antrum-hide', HIDE ? '1' : '0'); } catch (e) {} render(); }
-const eur = (n, dec = 2) => HIDE ? '€ •••' : '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const eur = (n, dec = 2) => '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const eur0 = n => eur(Math.round(n || 0), 0);
+// importi oscurabili con l'occhio (solo entrate/uscite della Home)
+const meur = (n, dec = 2) => HIDE ? '€ •••' : eur(n, dec);
+const meur0 = n => HIDE ? '€ •••' : eur0(n);
 const todayIso = () => new Date().toLocaleDateString('sv-SE');
 const pad = n => String(n).padStart(2, '0');
 const isoOf = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -350,10 +353,10 @@ function periodBar() {
 }
 const periodName = () => S.mode === 'anno' ? String(S.y) : `${MESI[S.m]} ${S.y}`;
 
-function header(title) {
+function header(title, eye = false) {
   return `<header class="top">
     <div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${title}</h1></div>
-    <div class="row" style="gap:8px"><button class="iconbtn" aria-label="${HIDE ? 'Mostra importi' : 'Nascondi importi'}" aria-pressed="${HIDE}" onclick="toggleHide()">${ic(HIDE ? 'eyeoff' : 'eye', 18)}</button>
+    <div class="row" style="gap:8px">${eye ? `<button class="iconbtn" aria-label="${HIDE ? 'Mostra importi' : 'Nascondi importi'}" aria-pressed="${HIDE}" onclick="toggleHide()">${ic(HIDE ? 'eyeoff' : 'eye', 18)}</button>` : ''}
     <button class="iconbtn" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button></div></div>
     ${periodBar()}
   </header>`;
@@ -374,9 +377,9 @@ function viewHome() {
       <span class="lab">${lab}</span><span class="big">${big}</span><span class="sub">${sub}</span></button>`;
   const occ = Math.round(c.notti / (r.days * 2) * 100);
   const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && !b.cleaning_paid);
-  let html = header('Home') + `<section class="tiles">
-    ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', eur0(c.netto), 'incassato ' + eur0(c.incasso))}
-    ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${eur0(c.loft.netto)}<br>Suite ${eur0(c.suite.netto)}</span>`, 'entrate e uscite')}
+  let html = header('Home', true) + `<section class="tiles">
+    ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', meur0(c.netto), 'incassato ' + meur0(c.incasso))}
+    ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${meur0(c.loft.netto)}<br>Suite ${meur0(c.suite.netto)}</span>`, 'entrate e uscite')}
     ${tile('notti', 'moon', '#E6F0FA', '#1F5D99', 'Notti prenotate', c.notti, `${c.pren} prenotazioni · ${occ}%`)}
     <button class="tile" onclick="go('pul')"><div class="ic" style="background:#E3F2F6;color:#1C6E85">${ic('spark')}</div>
       <span class="lab">Pulizie</span><span class="big">${c.nPulizie} <span style="font-size:14px;font-weight:600;opacity:.75">nel periodo</span></span>
@@ -387,26 +390,26 @@ function viewHome() {
     const parts = [['Commissioni portali', c.comm, '#9AA3AD'], ['Tassa di soggiorno da versare', c.tassa, '#8C7A5B'], ['Spese fisse', c.fisse, '#121A21'], ['Pulizie + biancheria', c.pulizie, '#1C6E85'], ['Spese manuali', c.spese, '#C2362B']];
     html += `<section class="card mt stack" style="gap:14px"><div class="between"><h2>Dal lordo al netto</h2><span class="small muted">${periodName()}</span></div>
       <div class="bar">${parts.map(p => p[1] > 0 ? `<div style="flex:${p[1]};background:${p[2]}"></div>` : '').join('')}${c.netto > 0 ? `<div style="flex:${c.netto};background:var(--green)"></div>` : ''}</div>
-      <div><div class="ln b"><span>Pagato dagli ospiti</span><span>${eur(c.lordo)}</span></div>
-      <div class="ln"><span class="lk"><span class="sw" style="background:#9AA3AD"></span>Commissioni portali</span><span>− ${eur(c.comm)}</span></div>
-      ${c.rett ? `<div class="ln"><span class="lk"><span class="sw" style="background:#E3E5E0"></span>Allineamento Airbnb</span><span>${c.rett >= 0 ? '+' : '−'} ${eur(Math.abs(c.rett))}</span></div>` : ''}
-      <div class="ln b sep"><span>Incassato</span><span>${eur(c.incasso)}</span></div>
-      ${parts.slice(1).map(p => `<div class="ln"><span class="lk"><span class="sw" style="background:${p[2]}"></span>${p[0]}</span><span>− ${eur(p[1])}</span></div>`).join('')}
-      <div class="netbox ${c.netto < 0 ? 'neg' : ''}"><span class="lk" style="font-weight:700">Netto</span><strong>${eur(c.netto)}</strong></div></div>
+      <div><div class="ln b"><span>Pagato dagli ospiti</span><span>${meur(c.lordo)}</span></div>
+      <div class="ln"><span class="lk"><span class="sw" style="background:#9AA3AD"></span>Commissioni portali</span><span>− ${meur(c.comm)}</span></div>
+      ${c.rett ? `<div class="ln"><span class="lk"><span class="sw" style="background:#E3E5E0"></span>Allineamento Airbnb</span><span>${c.rett >= 0 ? '+' : '−'} ${meur(Math.abs(c.rett))}</span></div>` : ''}
+      <div class="ln b sep"><span>Incassato</span><span>${meur(c.incasso)}</span></div>
+      ${parts.slice(1).map(p => `<div class="ln"><span class="lk"><span class="sw" style="background:${p[2]}"></span>${p[0]}</span><span>− ${meur(p[1])}</span></div>`).join('')}
+      <div class="netbox ${c.netto < 0 ? 'neg' : ''}"><span class="lk" style="font-weight:700">Netto</span><strong>${meur(c.netto)}</strong></div></div>
       ${c.mancanti.length ? `<p class="small muted" style="margin:0">${c.mancanti.length} prenotazion${c.mancanti.length > 1 ? 'i' : 'e'} senza importo non ${c.mancanti.length > 1 ? 'sono' : 'è'} nei conti.</p>` : ''}
       ${S.mode === 'anno' ? annualBars() : ''}
     </section>`;
   }
   if (S.open === 'strutture') {
     html += `<section class="stack mt">${['loft', 'suite'].map(k => { const p = c[k]; const tot = Math.max(p.incasso, p.uscite, 1); return `
-      <div class="card stack" style="gap:14px"><div class="between"><h2>Antrum ${PROP[k]}</h2><span style="font-size:18px;font-weight:800;color:${p.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${eur(p.netto)}</span></div>
+      <div class="card stack" style="gap:14px"><div class="between"><h2>Antrum ${PROP[k]}</h2><span style="font-size:18px;font-weight:800;color:${p.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${meur(p.netto)}</span></div>
       <div class="stack" style="gap:6px"><div class="bar"><div style="flex:${p.uscite};background:var(--red)"></div><div style="flex:${Math.max(p.incasso - p.uscite, 0)};background:var(--green)"></div></div>
-      <div class="between" style="font-size:13px;font-weight:700"><span style="color:var(--green-d)">Entrate ${eur(p.incasso)}</span><span style="color:var(--red-d)">Uscite ${eur(p.uscite)}</span></div></div>
+      <div class="between" style="font-size:13px;font-weight:700"><span style="color:var(--green-d)">Entrate ${meur(p.incasso)}</span><span style="color:var(--red-d)">Uscite ${meur(p.uscite)}</span></div></div>
       <div class="grid2" style="gap:6px 16px;font-size:13px;color:var(--text2)">
-        <span>Spese fisse</span><span style="text-align:right">${eur(p.fisse)}</span>
-        <span>Pulizie (${p.nPulizie})</span><span style="text-align:right">${eur(p.pulizie)}</span>
-        <span>Tassa di soggiorno</span><span style="text-align:right">${eur(p.tassa)}</span>
-        <span>Spese manuali</span><span style="text-align:right">${eur(p.spese)}</span></div></div>`; }).join('')}</section>`;
+        <span>Spese fisse</span><span style="text-align:right">${meur(p.fisse)}</span>
+        <span>Pulizie (${p.nPulizie})</span><span style="text-align:right">${meur(p.pulizie)}</span>
+        <span>Tassa di soggiorno</span><span style="text-align:right">${meur(p.tassa)}</span>
+        <span>Spese manuali</span><span style="text-align:right">${meur(p.spese)}</span></div></div>`; }).join('')}</section>`;
   }
   if (S.open === 'notti') {
     html += `<section class="card mt stack" style="gap:18px"><h2>Notti per struttura</h2>
@@ -444,7 +447,7 @@ function annualBars() {
       <span style="flex:1;display:flex;flex-direction:column;gap:3px">
         <span style="height:7px;border-radius:999px;background:var(--green);width:${c.incasso / max * 100}%"></span>
         <span style="height:7px;border-radius:999px;background:var(--red);width:${c.uscite / max * 100}%"></span></span>
-      <span style="width:84px;text-align:right;font-size:12px;font-weight:700;color:${c.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${eur0(c.netto)}</span></button>`).join('')}
+      <span style="width:84px;text-align:right;font-size:12px;font-weight:700;color:${c.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${meur0(c.netto)}</span></button>`).join('')}
   </div>`;
 }
 
