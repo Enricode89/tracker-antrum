@@ -186,6 +186,7 @@ const GG_L = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì'
 
 const ICON = {
   trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  back:'<path d="M15 18l-6-6 6-6"/>',
   house:'<path d="M3 21h18"/><path d="M5 21V8l6-4v17"/><path d="M13 21V10l6 3v8"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   spark:'<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/>',
@@ -265,6 +266,7 @@ const S = {
   data: { bookings: [], expenses: [], fixed: [], adj: [] },
   tab: 'home', mode: 'mese', y: now.getFullYear(), m: now.getMonth(),
   open: 'guadagno', calProp: 'entrambe', calDay: todayIso(), movFilter: 'tutti', pulFilter: 'tutte',
+  per: { from: now.getFullYear() * 12 + Math.max(now.getMonth() - 1, 0), to: now.getFullYear() * 12 + now.getMonth(), prop: 'entrambe', mov: false },
 };
 
 async function loadData() {
@@ -508,6 +510,96 @@ function versaTassa(importo) {
   const a = $('#f_amt'); if (a) a.value = String(importo.toFixed(2)).replace('.', ',');
 }
 
+
+// ---------------- Analisi periodo ----------------
+// Da un mese all'altro, Loft + Suite o una sola struttura. Stesse regole di calcolo della Home (mese per mese).
+function monthRange(k) { const y = Math.floor(k / 12), m = k % 12; return { from: isoOf(y, m, 1), to: m === 11 ? `${y + 1}-01-01` : isoOf(y, m + 1, 1), days: daysIn(y, m) }; }
+const perName = k => `${MESI[k % 12]} ${Math.floor(k / 12)}`;
+function setPer(patch) { Object.assign(S.per, patch); render(); }
+function perCanali(r, prop) {
+  const out = { airbnb: 0, booking: 0, diretta: 0 };
+  S.data.bookings.forEach(b => {
+    if (!inR(b.checkin, r) || !(+b.payout > 0)) return;
+    if (prop !== 'entrambe' && b.property !== prop) return;
+    out[isManual(b) ? 'diretta' : b.source] += +b.payout;
+  });
+  return out;
+}
+function viewPer() {
+  const P = S.per, from = Math.min(P.from, P.to), to = Math.max(P.from, P.to);
+  const pick = c => P.prop === 'entrambe' ? c : c[P.prop];
+  const mesi = [];
+  for (let k = from; k <= to; k++) { const r = monthRange(k), c = calc(r); mesi.push({ k, r, c: pick(c), ch: perCanali(r, P.prop) }); }
+  const sum = f => mesi.reduce((a, m) => a + f(m), 0);
+  const tot = { inn: sum(m => m.c.incasso), out: sum(m => m.c.uscite), fisse: sum(m => m.c.fisse), pul: sum(m => m.c.pulizie), nPul: sum(m => m.c.nPulizie),
+    tassa: sum(m => m.c.tassaVers), spese: sum(m => m.c.spese - m.c.tassaVers), notti: sum(m => m.c.notti), pren: sum(m => m.c.pren),
+    air: sum(m => m.ch.airbnb), book: sum(m => m.ch.booking), dir: sum(m => m.ch.diretta) };
+  tot.netto = tot.inn - tot.out;
+  const max = Math.max(1, ...mesi.map(m => Math.max(m.c.incasso, m.c.uscite)));
+  const nomeP = { entrambe: 'Loft + Suite', loft: 'Antrum Loft', suite: 'Antrum Suite' }[P.prop];
+  const titolo = (from === to ? perName(from) : `${MESI[from % 12]}${Math.floor(from / 12) !== Math.floor(to / 12) ? ' ' + Math.floor(from / 12) : ''} – ${perName(to)}`) + ' · ' + nomeP;
+  const years = []; for (let y = 2026; y <= now.getFullYear() + 1; y++) years.push(y);
+  const opts = sel => years.flatMap(y => MESI.map((n, m) => { const k = y * 12 + m; return `<option value="${k}" ${k === sel ? 'selected' : ''}>${n} ${y}</option>`; })).join('');
+  const cy = now.getFullYear() * 12, cm = now.getMonth();
+  const quick = [['Mese scorso', cy + cm - 1, cy + cm - 1], ['Ultimi 3 mesi', cy + cm - 2, cy + cm], ['Estate', cy + 5, cy + 8], ['Da inizio anno', cy, cy + cm]];
+  const seg = (k, l) => `<button aria-pressed="${P.prop === k}" onclick="setPer({prop:'${k}'})">${l}</button>`;
+  const line = (l, v, dot) => `<div class="ln" style="padding:6px 0;font-size:13px"><span class="lk">${dot ? `<span class="sw" style="background:${dot};border-radius:999px"></span>` : ''}${l}</span><b style="color:var(--ink)">${meur(v)}</b></div>`;
+
+  let html = `<header class="top"><button class="chip" style="height:34px;padding:0 12px;margin-bottom:6px" onclick="go('mov')">${ic('back', 14)} Movimenti</button>
+    <h1>Analisi periodo</h1></header>
+  <section class="card stack" style="gap:14px">
+    <div class="grid2"><label class="field">Dal mese<select onchange="setPer({from:+this.value})">${opts(P.from)}</select></label>
+    <label class="field">Al mese<select onchange="setPer({to:+this.value})">${opts(P.to)}</select></label></div>
+    <div class="field">Struttura<div class="seg">${seg('entrambe', 'Entrambe')}${seg('loft', 'Loft')}${seg('suite', 'Suite')}</div></div>
+    <div class="chips">${quick.map(q => `<button class="chip" style="height:34px;padding:0 12px;font-size:12px" onclick="setPer({from:${q[1]},to:${q[2]}})">${q[0]}</button>`).join('')}</div>
+  </section>
+  <section class="card mt stack" style="background:var(--ink);color:#fff;gap:14px">
+    <div class="between small" style="opacity:.8;font-weight:600"><span>${titolo}</span><span>${mesi.length} ${mesi.length === 1 ? 'mese' : 'mesi'}</span></div>
+    <div><div class="small" style="opacity:.8;font-weight:600">Netto</div><div style="font-size:34px;font-weight:800;letter-spacing:-.02em">${meur(tot.netto)}</div></div>
+    <div class="grid2" style="gap:10px"><div style="background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px"><div class="small" style="color:#9FE0B8;font-weight:600">Entrate</div><div style="font-size:18px;font-weight:800">${meur(tot.inn)}</div></div>
+    <div style="background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px"><div class="small" style="color:#FFB4A8;font-weight:600">Uscite</div><div style="font-size:18px;font-weight:800">${meur(tot.out)}</div></div></div>
+  </section>`;
+  if (mesi.length > 1) html += `<section class="card mt stack" style="gap:12px">
+    <div class="between"><h2>Mese per mese</h2><span class="lk small muted" style="font-weight:700"><span class="sw" style="background:var(--green)"></span>entrate <span class="sw" style="background:var(--red)"></span>uscite</span></div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:140px;border-bottom:1px solid var(--line);padding-bottom:4px">${mesi.map(m => `<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:2px;height:100%">
+      <span style="width:38%;max-width:22px;border-radius:5px 5px 2px 2px;background:var(--green);height:${Math.max(1.5, m.c.incasso / max * 100)}%"></span>
+      <span style="width:38%;max-width:22px;border-radius:5px 5px 2px 2px;background:var(--red);height:${Math.max(1.5, m.c.uscite / max * 100)}%"></span></div>`).join('')}</div>
+    <div style="display:flex;gap:6px;margin-top:-6px">${mesi.map(m => `<span style="flex:1;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">${MESI[m.k % 12].slice(0, 3)}</span>`).join('')}</div>
+    <div>${mesi.map(m => `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line2);font-size:13px">
+      <b>${perName(m.k)}</b><span style="color:var(--green-d);font-weight:600">+${meur0(m.c.incasso)}</span><span style="color:var(--red-d);font-weight:600">−${meur0(m.c.uscite)}</span>
+      <b style="min-width:70px;text-align:right;color:${m.c.netto >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">${meur0(m.c.netto)}</b></div>`).join('')}</div>
+  </section>`;
+  html += `<section class="grid2 mt">
+    <div class="card" style="padding:16px"><h2 style="font-size:15px;margin-bottom:6px">Entrate</h2>
+      ${line('Airbnb', tot.air, '#F2B300')}${line('Booking', tot.book, '#1F6FD1')}${line('Dirette', tot.dir, '#1E8A4C')}
+      <div class="ln sep" style="padding:8px 0 0;font-size:13px"><span>Notti</span><b style="color:var(--ink)">${tot.notti}</b></div>
+      <div class="ln" style="padding:4px 0 0;font-size:13px"><span>Prenotazioni</span><b style="color:var(--ink)">${tot.pren}</b></div></div>
+    <div class="card" style="padding:16px"><h2 style="font-size:15px;margin-bottom:6px">Uscite</h2>
+      ${line('Spese fisse', tot.fisse)}${line(`Pulizie (${tot.nPul})`, tot.pul)}${line('Tassa versata', tot.tassa)}${line('Altre spese', tot.spese)}</div>
+  </section>`;
+  if (Math.abs(tot.air + tot.book + tot.dir - tot.inn) > 1) html += `<p class="small muted" style="margin:10px 4px 0">Le entrate includono penali di cancellazione o rettifiche non attribuite a un canale.</p>`;
+
+  // movimenti del periodo
+  const rTot = { from: monthRange(from).from, to: monthRange(to).to };
+  html += `<button class="btn mt" style="background:#fff;color:var(--ink);border:1px solid #D9DCD6;width:100%" onclick="setPer({mov:${!P.mov}})">${ic('swap', 18)} ${P.mov ? 'Nascondi' : 'Vedi'} i movimenti del periodo</button>`;
+  if (P.mov) {
+    const propOf = x => (x.b || x.x || x.f || {}).property;
+    const list = movements(rTot).filter(x => P.prop === 'entrambe' || propOf(x) === P.prop || propOf(x) === 'entrambe')
+      .map(x => P.prop !== 'entrambe' && propOf(x) === 'entrambe' ? { ...x, a: x.a / 2, s: x.s + ' · metà' } : x);
+    let last = '';
+    html += '<div class="mt">';
+    list.forEach(x => {
+      if (x.d !== last) { if (last) html += '</div>'; const d = parse(x.d); html += `<div class="daylab">${GG_L[d.getUTCDay()]} ${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</div><div class="list">`; last = x.d; }
+      const click = x.b ? `openBooking('${x.b.id}')` : x.x ? `openExpense('${x.x.id}')` : x.f ? `go('fisse')` : '';
+      html += `<button class="item" ${click ? `onclick="${click}"` : 'disabled style="opacity:1;cursor:default"'}><span class="dot" style="background:${x.color}"></span>
+        <div style="flex:1;min-width:0"><div class="t">${esc(x.t)}</div><div class="s">${x.s}</div></div>
+        <span class="amt ${x.kind === 'in' ? 'plus' : 'minus'}">${x.a == null ? '—' : (x.kind === 'in' ? '+ ' : '− ') + eur(x.a)}</span></button>`;
+    });
+    html += list.length ? '</div></div>' : `<div class="empty">Nessun movimento nel periodo</div></div>`;
+  }
+  return html;
+}
+
 // ---------------- Movimenti ----------------
 function movements(r) {
   const out = [];
@@ -536,7 +628,8 @@ function viewMov() {
   const totIn = list.filter(x => x.kind === 'in').reduce((s, x) => s + (+x.a || 0), 0), totOut = list.filter(x => x.kind === 'out').reduce((s, x) => s + (+x.a || 0), 0);
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.movFilter='${k}';render()">${l}</button>`;
   let html = header('Movimenti') + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
-    <button class="chip" onclick="go('fisse')">${ic('repeat', 14)} Spese fisse</button></div>
+    <button class="chip" onclick="go('fisse')">${ic('repeat', 14)} Spese fisse</button>
+    <button class="chip" onclick="go('per')">${ic('trend', 14)} Analisi periodo</button></div>
     ${f !== 'completare' ? `<div class="grid2 mt"><div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Entrate</div><div style="font-size:20px;font-weight:800;color:var(--green-d)">${eur(totIn)}</div></div>
     <div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Uscite</div><div style="font-size:20px;font-weight:800;color:var(--red-d)">${eur(totOut)}</div></div></div>` : ''}`;
   if (!list.length) return html + `<div class="empty">Nessun movimento in ${periodName()}</div>`;
@@ -837,7 +930,7 @@ async function endFixed(id) {
 // =====================================================================
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 function render() {
-  const v = { home: viewHome, cal: viewCal, mov: viewMov, pul: viewPul, fisse: viewFisse }[S.tab]();
+  const v = { home: viewHome, cal: viewCal, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
