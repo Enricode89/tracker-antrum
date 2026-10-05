@@ -208,6 +208,7 @@ const ICON = {
   cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
 };
 const ic = (n, s = 20, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
@@ -729,7 +730,7 @@ function viewPul() {
   const chip = (k, l) => `<button class="chip" aria-pressed="${S.pulFilter === k}" onclick="S.pulFilter='${k}';render()">${l}</button>`;
   const flag = (b, key, label, cost) => `<button class="paybtn ${b[key] ? 'ok' : 'no'}" aria-label="${label} ${b[key] ? 'pagata' : 'da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}','${key}')">${ic(b[key] ? 'check' : 'x', 15, 3)}${label} ${eur0(cost(b))}</button>`;
   const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
-  return header('Pulizie') + box('Pulizie', 'cleaning_paid', pul) + box('Biancheria', 'linen_paid', lin) + `
+  return header('Pulizie') + pushCard() + box('Pulizie', 'cleaning_paid', pul) + box('Biancheria', 'linen_paid', lin) + `
     <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
     <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
     <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
@@ -973,10 +974,65 @@ async function start() {
   try { await loadData(); render(); }
   catch (e) { if (/JWT|auth/i.test(e.message)) return loginView(); $('#root').innerHTML = `<div class="empty" style="padding-top:35vh">Impossibile caricare i dati: ${esc(e.message)}<br><br><button class="btn" style="width:auto;padding:0 24px" onclick="start()">Riprova</button></div>`; }
 }
+// ---------------- Notifiche push (promemoria pulizie) ----------------
+const PUSH_FN = SUPABASE_URL + '/functions/v1/notifiche';
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+function b64u(s) { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+async function pushInit() {
+  if (!pushOk()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    S.pushOn = !!sub && Notification.permission === 'granted';
+    if (S.pushOn) await salvaIscrizione(sub);   // tiene aggiornato l'indirizzo del telefono
+    if (S.tab === 'pul') render();
+  } catch (e) { /* nessuna notifica: pazienza */ }
+}
+async function salvaIscrizione(sub) {
+  const j = sub.toJSON();
+  const { error } = await sb.from('push_subscriptions').upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, device: navigator.userAgent.slice(0, 200) }, { onConflict: 'endpoint' });
+  if (error) throw error;
+}
+async function attivaNotifiche() {
+  if (!pushOk()) return toast(isIOS && !standalone() ? 'Apri l\'app dall\'icona sulla schermata Home' : 'Questo telefono non supporta le notifiche');
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { render(); return toast('Notifiche non consentite: attivale dalle impostazioni del telefono'); }
+    const reg = await navigator.serviceWorker.ready;
+    const { publicKey } = await (await fetch(PUSH_FN)).json();
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(publicKey) });
+    await salvaIscrizione(sub);
+    S.pushOn = true; render(); await provaNotifica();
+  } catch (e) { toast('Errore: ' + e.message); }
+}
+async function provaNotifica() {
+  try {
+    const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+    const { data } = await sb.auth.getSession();
+    const r = await (await fetch(PUSH_FN, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + data.session.access_token }, body: JSON.stringify({ test: true, endpoint: sub.endpoint }) })).json();
+    toast(r.inviate ? 'Notifica di prova inviata' : 'Prova non riuscita' + (r.dettagli && r.dettagli[0] ? ': ' + r.dettagli[0] : r.error ? ': ' + r.error : ''));
+  } catch (e) { toast('Errore: ' + e.message); }
+}
+function pushCard() {
+  if (S.pushOn) return `<div class="row small" style="gap:8px;margin:0 4px 12px;color:var(--green-d);font-weight:700">${ic('bell', 16)} Promemoria attivi su questo telefono
+    <button style="margin-left:auto;border:0;background:none;color:var(--muted);font-weight:700;font-size:13px;text-decoration:underline" onclick="provaNotifica()">Prova</button></div>`;
+  const ios = isIOS && !standalone();
+  const negato = pushOk() && Notification.permission === 'denied';
+  return `<div class="card stack" style="gap:10px;margin-bottom:14px;background:#fff">
+    <div class="row" style="gap:12px"><span class="ic" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#E3F2F6;color:#1C6E85">${ic('bell')}</span>
+    <div style="flex:1"><b>Promemoria pulizie sul telefono</b><div class="small muted">Alle 18:00 del giorno prima di ogni check-out, con il messaggio WhatsApp pronto.</div></div></div>
+    ${ios ? '<p class="small muted" style="margin:0">Su iPhone: apri l\'app dall\'icona sulla schermata Home, poi torna qui.</p>'
+      : negato ? '<p class="small muted" style="margin:0">Notifiche bloccate: riattivale dalle impostazioni del telefono per questa app.</p>'
+      : `<button class="btn" style="height:48px" onclick="attivaNotifiche()">Attiva notifiche</button>`}</div>`;
+}
+
 (async () => {
   const { data } = await sb.auth.getSession();
   if (data.session) start(); else loginView();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (data.session) pushInit();
 })();
 </script>
 </body>
