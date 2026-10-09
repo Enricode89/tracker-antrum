@@ -65,6 +65,7 @@ h2{margin:0;font-size:17px;font-weight:700}
 .tile .lab{font-size:13px;font-weight:600;opacity:.75}
 .tile .big{font-size:25px;font-weight:800;letter-spacing:-.02em}
 .tile .sub{font-size:12px;font-weight:500;opacity:.75}
+.ln>span:last-child{white-space:nowrap}
 .ln{display:flex;justify-content:space-between;align-items:center;padding:9px 0;font-size:14px;color:var(--text2);gap:10px}
 .ln.b{color:var(--ink);font-weight:700}
 .ln.sep{border-top:1px solid var(--line);padding-top:11px}
@@ -208,6 +209,7 @@ const ICON = {
   cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
   eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  calc:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h4"/>',
   bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
 };
@@ -399,7 +401,8 @@ function viewHome() {
     <button class="tile" onclick="go('pul')"><div class="ic" style="background:#E3F2F6;color:#1C6E85">${ic('spark')}</div>
       <span class="lab">Pulizie</span><span class="big">${c.nPulizie} <span style="font-size:14px;font-weight:600;opacity:.75">nel periodo</span></span>
       <span class="sub" style="opacity:1;font-weight:700;color:${daPagare.length ? 'var(--red-d)' : 'var(--green)'}">${daPagare.length ? daPagare.length + ' da pagare · ' + eur0(daPagare.reduce((s, b) => s + unpaid(b), 0)) : 'nessuna da pagare'}</span></button>
-  </section>`;
+  </section>
+  <button class="alert mt" style="background:#FFF4D6;color:#6B4E00" onclick="openSimula()">${ic('calc')}<span style="flex:1"><b>Simula prezzo</b> · Airbnb e Booking, quanto ti resta davvero</span><b>Apri</b></button>`;
 
   if (S.open === 'guadagno') {
     const parts = [['Commissioni portali', c.comm, '#9AA3AD'], ['Ritenuta Airbnb 21%', c.rit, '#6B5B95'], ['Spese fisse', c.fisse, '#121A21'], ['Pulizie + biancheria', c.pulizie, '#1C6E85'], ['Spese manuali', c.spese, '#C2362B']];
@@ -788,6 +791,78 @@ function sheet(html) {
 function closeSheet() { const o = $('#ov'); if (o) o.remove(); }
 const sheetHead = t => `<div class="between" style="margin-bottom:16px"><h2 style="font-size:22px;font-weight:800">${t}</h2><button class="iconbtn" aria-label="Chiudi" onclick="closeSheet()">${ic('x', 18)}</button></div>`;
 const propSel = (v, entrambe) => `<select id="f_prop"><option value="loft" ${v === 'loft' ? 'selected' : ''}>Loft</option><option value="suite" ${v === 'suite' ? 'selected' : ''}>Suite</option>${entrambe ? `<option value="entrambe" ${v === 'entrambe' ? 'selected' : ''}>Entrambe (metà ciascuna)</option>` : ''}</select>`;
+
+// ---------------- Simulatore prezzo Airbnb / Booking ----------------
+// Prezzo che imposti = prezzo che paga l'ospite (tassa di soggiorno a parte, niente commissione su di essa).
+// Airbnb (dal 13/10/2026): commissione unica 15,5% + IVA 22% (privato = 18,91%), ritenuta 21% sul prezzo lordo.
+// Booking (verificato sul pagamento Antrum Loft del 3/9/2026: lordo 215,10 → netto 118,75):
+//   commissione 18% + costo transazione 1,5%, IVA 22% su entrambi, ritenuta 21% sul lordo.
+//   Se l'ospite paga in struttura: niente costo transazione, la cedolare 21% la versi tu.
+const SIMS = { canale: 'airbnb', prezzo: '', notti: 1, iva: true, obiettivo: '', bComm: '18', bPag: true, bFee: '1,5' };
+const pnum = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; };   // percentuali: 1,5 = 1.5
+const SIM_IVA = 0.22, SIM_RIT = 0.21;
+function simTassi(canale) {
+  const iva = SIMS.iva ? 1 + SIM_IVA : 1;
+  if (canale === 'airbnb') return { comm: 0.155, iva, fee: 0, label: 'Commissione Airbnb 15,5%' };
+  return { comm: pnum(SIMS.bComm) / 100, iva, fee: SIMS.bPag ? pnum(SIMS.bFee) / 100 : 0, label: 'Commissione Booking ' + String(SIMS.bComm).replace('.', ',') + '%' };
+}
+function simCalc(P, canale) {
+  // arrotondate al centesimo voce per voce, come negli estratti Airbnb/Booking
+  const r2 = x => Math.round(x * 100) / 100;
+  const t = simTassi(canale), comm = r2(P * t.comm), fee = r2(P * t.fee), iva = r2((comm + fee) * (t.iva - 1)), rit = r2(P * SIM_RIT);
+  return { P, t, comm, iva, fee, rit, netto: r2(P - comm - iva - fee - rit) };
+}
+const simQuota = canale => { const t = simTassi(canale); return 1 - (t.comm + t.fee) * t.iva - SIM_RIT; };
+const SIM_NOME = { airbnb: 'Airbnb', booking: 'Booking' };
+function openSimula(canale) {
+  if (canale) SIMS.canale = canale;
+  const c = SIMS.canale, nome = SIM_NOME[c];
+  sheet(sheetHead('Simula prezzo') + `<div class="stack" style="gap:16px">
+    <div class="seg"><button aria-pressed="${c === 'airbnb'}" onclick="openSimula('airbnb')">Airbnb</button><button aria-pressed="${c === 'booking'}" onclick="openSimula('booking')">Booking</button></div>
+    <p class="small muted" style="margin:-4px 0 0">Scrivi il prezzo finale che imposti su ${nome}: è quello che paga l'ospite. Ti dico quanto ti resta dopo ${nome} e tasse, senza togliere pulizie e altre spese.</p>
+    <label class="field">Prezzo finale su ${nome}<div class="money"><span>€</span><input id="sim_p" inputmode="decimal" placeholder="0,00" value="${esc(SIMS.prezzo)}" oninput="SIMS.prezzo=this.value;simRender()"></div></label>
+    <div class="grid2"><div class="field">Il prezzo è<div class="seg">
+        <button aria-pressed="${SIMS.notti === 1}" onclick="simNotti(1)">a notte</button>
+        <button id="sim_m2" aria-pressed="${SIMS.notti !== 1}" onclick="simNotti(SIMS.notti === 1 ? 3 : SIMS.notti)">totale</button></div></div>
+      <label class="field" style="${SIMS.notti === 1 ? 'opacity:.4' : ''}">Notti<input id="sim_n" inputmode="numeric" value="${SIMS.notti === 1 ? '' : SIMS.notti}" placeholder="—" ${SIMS.notti === 1 ? 'disabled' : ''} oninput="SIMS.notti=Math.max(2,parseInt(this.value)||2);simRender()"></label></div>
+    <div id="sim_out"></div>
+    <details class="card" style="background:#fff" ${c === 'booking' ? 'open' : ''}><summary style="font-weight:700;cursor:pointer">Impostazioni${c === 'booking' ? ' Booking' : ''}</summary>
+      <div class="stack" style="gap:12px;margin-top:12px">
+        ${c === 'booking' ? `<div class="grid2"><label class="field">Commissione %<input id="sim_bc" inputmode="decimal" value="${esc(String(SIMS.bComm).replace('.', ','))}" oninput="SIMS.bComm=this.value;simRender()"></label>
+          <label class="field" style="${SIMS.bPag ? '' : 'opacity:.4'}">Costo transazione %<input id="sim_bf" inputmode="decimal" value="${esc(String(SIMS.bFee).replace('.', ','))}" ${SIMS.bPag ? '' : 'disabled'} oninput="SIMS.bFee=this.value;simRender()"></label></div>
+          <span class="small muted" style="font-weight:500;margin-top:-6px">Valori presi dal tuo pagamento Booking del 3/9 (Antrum Loft): commissione 18%, costo transazione 1,5%. Cambiali se cambia il contratto.</span>
+          <label class="check"><input type="checkbox" ${SIMS.bPag ? 'checked' : ''} onchange="SIMS.bPag=this.checked;openSimula()"><span style="flex:1">Pagamenti tramite Booking<br><span class="small muted" style="font-weight:500">Se l'ospite paga in struttura non c'è il costo transazione, ma la cedolare 21% la versi tu</span></span></label>` : ''}
+        <label class="check"><input type="checkbox" ${SIMS.iva ? 'checked' : ''} onchange="SIMS.iva=this.checked;simRender()"><span style="flex:1">IVA 22% sulla commissione<br><span class="small muted" style="font-weight:500">Sì se sei privato o forfettario; no se hai partita IVA ordinaria</span></span></label>
+      </div></details>
+    <label class="field">Al contrario: quanto vuoi che ti resti?<div class="money" style="height:58px;border-width:1.5px"><span>€</span><input id="sim_o" inputmode="decimal" placeholder="0,00" value="${esc(SIMS.obiettivo)}" oninput="SIMS.obiettivo=this.value;simRender()"></div></label>
+    <div id="sim_rev"></div>
+    <p class="small muted" style="margin:0">${c === 'airbnb' ? 'Airbnb: valido per le prenotazioni fatte dal 13 ottobre 2026 (commissione unica 15,5%).' : 'Booking: calcolo verificato sul tuo pagamento del 3/9 (215,10 € lordi → 118,75 € netti).'} La tassa di soggiorno si aggiunge a parte e la versi tu.</p>
+  </div>`);
+  simRender();
+}
+function simNotti(n) { SIMS.notti = n; openSimula(); }
+function simRender() {
+  const out = $('#sim_out'), rev = $('#sim_rev'); if (!out) return;
+  const c = SIMS.canale, altro = c === 'airbnb' ? 'booking' : 'airbnb';
+  const P = num(SIMS.prezzo) || 0, n = SIMS.notti;
+  if (P > 0) {
+    const pct = x => (Math.round(x / P * 1000) / 10).toLocaleString('it-IT') + '%';
+    const r2 = simCalc(P, altro);
+    const rr = simCalc(P, c);
+    const parts = [[rr.t.label, rr.comm, '#9AA3AD'], ['Costo transazione ' + String(SIMS.bFee).replace('.', ',') + '%', rr.fee, '#B88A3B'], [rr.fee > 0 ? 'IVA 22% su commissione e transazione' : 'IVA 22% sulla commissione', rr.iva, '#C9CCC6'],
+      [c === 'booking' && !SIMS.bPag ? 'Cedolare 21% (la versi tu)' : 'Ritenuta 21% (trattenuta da ' + SIM_NOME[c] + ')', rr.rit, '#6B5B95']].filter(p => p[1] > 0);
+    const diff = rr.netto - r2.netto;
+    out.innerHTML = `<section class="card stack" style="gap:12px;background:#fff">
+      <div class="bar">${parts.map(p => `<div style="flex:${p[1]};background:${p[2]}"></div>`).join('')}<div style="flex:${Math.max(rr.netto, 0)};background:var(--green)"></div></div>
+      <div><div class="ln b"><span>L'ospite paga</span><span>${eur(P)}</span></div>
+      ${parts.map(p => `<div class="ln"><span class="lk"><span class="sw" style="background:${p[2]}"></span>${p[0]}</span><span>− ${eur(p[1])}</span></div>`).join('')}
+      <div class="netbox"><span class="lk" style="font-weight:700">Ti resta</span><strong>${eur(rr.netto)}</strong></div>
+      <p class="small muted" style="margin:8px 0 0">${pct(rr.netto)} del prezzo${n > 1 ? ` · ${eur(rr.netto / n)} a notte su ${n} notti` : ''}. Senza pulizie, biancheria e spese.</p>
+      <p class="small" style="margin:8px 0 0;font-weight:700;color:${diff >= 0 ? 'var(--green-d)' : 'var(--red-d)'}">Stesso prezzo su ${SIM_NOME[altro]}: ti resta ${eur(r2.netto)} (${diff >= 0 ? '+' : '−'}${eur(Math.abs(diff))} qui su ${SIM_NOME[c]})</p></div></section>`;
+  } else out.innerHTML = '';
+  const O = num(SIMS.obiettivo) || 0;
+  rev.innerHTML = O > 0 ? `<div class="netbox" style="background:#FFF4D6;color:#6B4E00"><span class="lk" style="font-weight:700">Imposta su ${SIM_NOME[c]}</span><strong>${eur(Math.ceil(O / simQuota(c)))}</strong></div>` : '';
+}
 
 function openBooking(id) {
   const b = S.data.bookings.find(x => x.id === id);
