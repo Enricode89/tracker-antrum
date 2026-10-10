@@ -136,7 +136,41 @@ const ALIAS = { 'GERMANY':'GERMANIA','DEUTSCHLAND':'GERMANIA','FRANCE':'FRANCIA'
 // ===================== Stato =====================
 const qs = new URLSearchParams(location.search);
 const S = { lang: pickLang(), pren: null, tab: null, n: 1, gruppo: '', ospiti: [], err: '', sending: false, done: false, mod: null };
-function pickLang() { const q = qs.get('lang'); if (q && T[q]) return q; const n = (navigator.language || 'it').slice(0, 2); return T[n] ? n : 'en'; }
+function pickLang() { const q = qs.get('lang'); if (q && T[q]) return q; const n = (navigator.language || 'it').slice(0, 2); return ['it', 'en', 'fr', 'es'].includes(n) ? n : 'en'; }
+// lingua proposta in base a nome e cognome dell'ospite (l'ospite può sempre cambiarla in alto)
+function linguaDaNome(full) {
+  const raw = String(full || '').trim().toLowerCase();
+  if (!raw) return null;
+  const sc = { it: 0, es: 0, fr: 0, en: 0 };
+  if (/ñ/.test(raw)) sc.es += 3;
+  if (/[áíóú]/.test(raw)) sc.es += 2;
+  if (/[çéèêëîïôûœ]/.test(raw)) sc.fr += 2;
+  const w = raw.normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[\s\-']+/).filter(Boolean);
+  const N = {
+    it: 'giuseppe giovanni antonio mario luigi francesco salvatore vincenzo pietro gennaro raffaele alessandro andrea matteo lorenzo davide riccardo federico gabriele simone stefano paolo marco luca fabio massimo claudio enrico carlo roberto giorgio sergio emanuele alessio filippo tommaso nicola domenico pasquale ciro rocco michele daniele giacomo leonardo edoardo jacopo maria anna giulia francesca chiara sara valentina martina giorgia alessia federica silvia elena laura paola rosa angela antonella teresa lucia carmela concetta assunta immacolata serena ilaria eleonora beatrice ginevra aurora gaia noemi rita patrizia daniela simona roberta barbara cristina monica manuela'.split(' '),
+    es: 'jose juan javier alejandro pablo diego sergio jorge miguel carlos manuel francisco antonio jesus rafael fernando alvaro gonzalo ignacio santiago mateo hugo raul ruben adrian oscar enrique luis pedro angel ramon joaquin agustin facundo matias tomas nicolas maria carmen lucia sofia paula marta elena laura ana isabel pilar rocio dolores mercedes cristina beatriz alba irene nerea ainhoa lorena valentina camila florencia catalina ximena guadalupe'.split(' '),
+    fr: 'jean pierre francois louis nicolas julien mathieu guillaume antoine benoit thibault thibaut sebastien jerome olivier philippe alain bernard christophe frederic laurent pascal thierry yves remi gael loic quentin maxime clement romain hugo theo baptiste arnaud aurelien marie camille amelie celine elodie margaux chloe manon lea juliette claire sophie isabelle nathalie sylvie veronique valerie aurelie emilie helene anais oceane mathilde clemence agathe solene brigitte genevieve'.split(' '),
+    en: 'john james william michael david richard thomas christopher matthew andrew daniel joseph robert charles george edward henry jack harry oliver liam noah ethan mason logan ryan kevin brian steven mark paul peter jason scott justin tyler mary jennifer elizabeth sarah jessica emily emma olivia ashley amanda megan lauren rachel hannah samantha katherine kate charlotte amelia grace lily sophie chloe lucy abigail madison taylor'.split(' '),
+  };
+  const C = {
+    it: 'rossi russo ferrari esposito bianchi romano colombo ricci marino greco bruno gallo conti de rosa costa giordano mancini rizzo lombardi moretti barbieri fontana santoro mariani rinaldi caruso ferrara galli martini leone longo gentile martinelli vitale lombardo serra coppola de luca de santis'.split(' '),
+    es: 'garcia rodriguez gonzalez fernandez lopez martinez sanchez perez gomez martin jimenez ruiz hernandez diaz moreno alvarez munoz romero alonso gutierrez navarro torres dominguez vazquez ramos gil ramirez serrano blanco molina morales suarez ortega delgado castro ortiz rubio marin sanz nunez iglesias medina garrido cortes castillo santos lozano guerrero cano prieto mendez cruz herrera'.split(' '),
+    fr: 'dupont durand dubois lefebvre leroy moreau laurent simon michel lefevre garcia david bertrand roux vincent fournier morel girard andre mercier blanc guerin boyer garnier chevalier francois legrand gauthier perrin robin clement morin nicolas henry roussel mathieu gautier masson marchand duval denis lemaire dumont fontaine rousseau'.split(' '),
+    en: 'smith johnson williams brown jones miller davis wilson anderson taylor thomas moore jackson white harris thompson clark lewis robinson walker young allen king wright scott hill green adams baker nelson carter mitchell roberts turner phillips campbell parker evans edwards collins stewart morris murphy cook rogers morgan cooper peterson bailey reed kelly howard ward watson brooks wood hughes'.split(' '),
+  };
+  w.forEach((x, i) => {
+    for (const k in N) if (N[k].includes(x)) sc[k] += i === 0 ? 3 : 1;
+    for (const k in C) if (C[k].includes(x)) sc[k] += i > 0 ? 3 : 1;
+    if (i === 0) return;
+    if (/(ez|iz)$/.test(x)) sc.es += 2;
+    if (/(eau|eaux|ault|oux|ois|ard|ier|iere|ot|et)$/.test(x)) sc.fr += 1.5;
+    if (/(ini|ino|elli|ello|etti|etto|ucci|uzzi|azzi|azzo|izzi|izzo|one|oni|ese|esi|aro|ari|ieri|iero|ano|ani|ato|ata)$/.test(x)) sc.it += 1.5;
+    if (/(son|sen|ton|ford|field|wood|worth|ley|ham|man|er|ings|ell)$/.test(x)) sc.en += 1;
+  });
+  if (/^(de|di|del|della|lo|la|li)$/.test(w[1] || '') && w.length > 2) sc.it += 1;
+  const best = Object.entries(sc).sort((a, b) => b[1] - a[1]);
+  return best[0][1] >= 1.5 && best[0][1] > best[1][1] ? best[0][0] : null;
+}
 const t = k => T[S.lang][k] || T.it[k];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -154,6 +188,7 @@ const nuovoOspite = () => ({ cognome: '', nome: '', sesso: '', nascita: '', stat
     if (!p.ok) return fatal(t('errLink'));
     if (!tab.ok) return fatal(t('errRete'));
     S.pren = p.p; S.tab = indicizza(tab);
+    if (!qs.get('lang')) { const g = linguaDaNome(p.p.ospite); if (g) { S.lang = g; document.documentElement.lang = g; } }
     if (mod && mod.ok) caricaModifica(mod);           // link di modifica: modulo già compilato
     else {
       S.n = Math.min(Math.max(p.p.ospiti || 1, 1), MAX_OSPITI);
@@ -225,7 +260,7 @@ const nomeStruttura = () => S.pren && S.pren.nomeStruttura ? S.pren.nomeStruttur
 function topbar() {
   return `<div class="top"><div class="brand">ANTRUM ${esc(nomeStruttura().toUpperCase())}<small>Salerno</small></div>
     <select class="lang" aria-label="Language" onchange="salva();S.lang=this.value;document.documentElement.lang=this.value;render()">
-    ${[['it', 'Italiano'], ['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch']].map(([k, l]) => `<option value="${k}" ${k === S.lang ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
+    ${[['it', 'Italiano'], ['en', 'English'], ['fr', 'Français'], ['es', 'Español']].map(([k, l]) => `<option value="${k}" ${k === S.lang ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
 }
 function segBtn(v, l) { return `<button type="button" aria-pressed="${S.gruppo === v}" onclick="salva();S.gruppo='${v}';render()">${l}</button>`; }
 function setN(n) { salva(); n = Math.min(Math.max(n, 1), MAX_OSPITI); while (S.ospiti.length < n) S.ospiti.push(nuovoOspite()); S.ospiti.length = n; S.n = n; render(); }
