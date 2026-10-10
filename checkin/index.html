@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antrum · Online check-in</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#121A21">
+<link rel="icon" href="../icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#121A21;--ground:#F4F5F2;--card:#fff;--muted:#5E6670;--line:#E3E5E0;--green:#1E7A45;--green-t:#E2F3E8;--red:#C2362B;--red-t:#FBE9E7;--accent:#B88A3B}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.45 'Plus Jakarta Sans',system-ui,-apple-system,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.brand{font-weight:800;letter-spacing:.02em;font-size:15px}
+.brand small{display:block;font-weight:600;color:var(--muted);font-size:12px;letter-spacing:0}
+select.lang{height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 10px;font:inherit;font-size:14px}
+.hero{background:var(--ink);color:#fff;border-radius:22px;padding:20px}
+.hero h1{margin:0 0 4px;font-size:24px;line-height:1.2}
+.hero p{margin:0;color:#B9C1C9;font-size:14px}
+.stay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.stay div{background:rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
+.stay span{display:block;font-size:12px;color:#B9C1C9}
+.stay b{font-size:16px}
+h2{font-size:18px;margin:26px 4px 10px}
+.card{background:var(--card);border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 1px 0 rgba(18,26,33,.04)}
+.card h3{margin:0 0 12px;font-size:16px;display:flex;align-items:center;gap:8px}
+.card h3 .n{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:13px;display:grid;place-items:center}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 5px}
+input,select{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;background:#fff;color:var(--ink);-webkit-appearance:none;appearance:none}
+input:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--red);background:var(--red-t)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-weight:700;color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.ph{position:relative;border:1.5px dashed #C9CCC6;border-radius:14px;height:110px;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;background:#FAFAF8}
+.ph input{position:absolute;inset:0;opacity:0;height:100%}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph.bad{border-color:var(--red);background:var(--red-t)}
+.count{display:flex;align-items:center;gap:14px}
+.count button{width:46px;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:700}
+.count b{font-size:22px;min-width:30px;text-align:center}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted);margin:16px 4px}
+.check input{width:22px;height:22px;flex-shrink:0;margin-top:1px;-webkit-appearance:checkbox;appearance:auto}
+.btn{width:100%;height:56px;border:0;border-radius:16px;background:var(--green);color:#fff;font:inherit;font-size:17px;font-weight:800}
+.btn:disabled{opacity:.6}
+.err{background:var(--red-t);color:#8E2A20;border-radius:14px;padding:12px 14px;font-size:14px;margin:12px 0}
+.done{text-align:center;padding:40px 10px}
+.done .ok{width:72px;height:72px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;margin:0 auto 16px;font-size:36px}
+.center{text-align:center;color:var(--muted);padding:60px 10px}
+.hidden{display:none}
+.mini{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="center">…</div></div>
+
+<datalist id="dl-stati"></datalist>
+<datalist id="dl-comuni"></datalist>
+
+<script>
+// ===================== Configurazione =====================
+const API = 'https://script.google.com/macros/s/AKfycbzVWh2PXMxgYzvhUqaHPVS4WTJLdnAr0ra7VG5tqVt6G8WopIbYezJMnJqeHqwLkRaq9g/exec';   // URL della web app Apps Script (…/exec)
+const MAX_OSPITI = 10;
+const ITALIA = '100000100';
+
+// ===================== Testi =====================
+const T = {
+  it: { title: 'Check-in online', sub: 'La legge italiana (art. 109 TULPS) ci chiede di registrare tutti gli ospiti presso la Questura. Bastano 3 minuti.',
+    arrivo: 'Arrivo', partenza: 'Partenza', notti: 'notti', ospiti: 'Quanti siete?', gruppo: 'Viaggiate come', famiglia: 'Famiglia', gruppoA: 'Amici / gruppo',
+    ospite: 'Ospite', tu: 'Tu (titolare della prenotazione)', cognome: 'Cognome', nome: 'Nome', sesso: 'Sesso', m: 'Uomo', f: 'Donna', nascita: 'Data di nascita',
+    statoN: 'Paese di nascita', comuneN: 'Comune di nascita', cittad: 'Cittadinanza', doc: 'Documento', docTipo: 'Tipo di documento', docNum: 'Numero del documento',
+    docPaese: 'Paese di rilascio', docComune: 'Comune di rilascio', fronte: 'Foto fronte', retro: 'Foto retro', fotoOpz: 'Foto documento (facoltativa)',
+    cerca: 'Scrivi e scegli dall\'elenco', contatto: 'Contatto', email: 'Email', tel: 'Telefono', facolt: 'facoltativo',
+    privacy: 'Acconsento al trattamento dei dati per la comunicazione obbligatoria alla Questura (art. 109 TULPS). I dati non vengono usati per altri scopi e le foto dei documenti vengono cancellate entro 30 giorni dalla partenza.',
+    invia: 'Invia i dati', invio: 'Invio in corso…', grazie: 'Grazie!', grazieT: 'Abbiamo ricevuto i vostri dati. Ci vediamo presto!',
+    errCampi: 'Controlla i campi evidenziati in rosso.', errPrivacy: 'Serve il consenso per procedere.', errRete: 'Invio non riuscito, riprova tra poco.',
+    errLink: 'Questo link non è valido. Contatta l\'host.', foto: 'Scatta o carica', fotoReq: 'Servono le foto del documento del titolare.' },
+  en: { title: 'Online check-in', sub: 'Italian law (art. 109 TULPS) requires us to register every guest with the police. It takes 3 minutes.',
+    arrivo: 'Arrival', partenza: 'Departure', notti: 'nights', ospiti: 'How many guests?', gruppo: 'Travelling as', famiglia: 'Family', gruppoA: 'Friends / group',
+    ospite: 'Guest', tu: 'You (lead guest)', cognome: 'Surname', nome: 'Given name', sesso: 'Sex', m: 'Male', f: 'Female', nascita: 'Date of birth',
+    statoN: 'Country of birth', comuneN: 'Town of birth (Italy)', cittad: 'Citizenship', doc: 'ID document', docTipo: 'Document type', docNum: 'Document number',
+    docPaese: 'Issuing country', docComune: 'Issuing town (Italy)', fronte: 'Front photo', retro: 'Back photo', fotoOpz: 'Document photo (optional)',
+    cerca: 'Type and pick from the list', contatto: 'Contact', email: 'Email', tel: 'Phone', facolt: 'optional',
+    privacy: 'I consent to the processing of these data for the mandatory notification to the Italian police (art. 109 TULPS). Data are not used for anything else and document photos are deleted within 30 days of departure.',
+    invia: 'Send details', invio: 'Sending…', grazie: 'Thank you!', grazieT: 'We have received your details. See you soon!',
+    errCampi: 'Please check the fields highlighted in red.', errPrivacy: 'Consent is required to continue.', errRete: 'Sending failed, please try again shortly.',
+    errLink: 'This link is not valid. Please contact your host.', foto: 'Take or upload', fotoReq: 'Photos of the lead guest\'s document are required.' },
+  es: { title: 'Check-in online', sub: 'La ley italiana (art. 109 TULPS) nos obliga a registrar a todos los huéspedes ante la policía. Son 3 minutos.',
+    arrivo: 'Llegada', partenza: 'Salida', notti: 'noches', ospiti: '¿Cuántos sois?', gruppo: 'Viajáis como', famiglia: 'Familia', gruppoA: 'Amigos / grupo',
+    ospite: 'Huésped', tu: 'Tú (titular de la reserva)', cognome: 'Apellidos', nome: 'Nombre', sesso: 'Sexo', m: 'Hombre', f: 'Mujer', nascita: 'Fecha de nacimiento',
+    statoN: 'País de nacimiento', comuneN: 'Municipio de nacimiento (Italia)', cittad: 'Nacionalidad', doc: 'Documento', docTipo: 'Tipo de documento', docNum: 'Número de documento',
+    docPaese: 'País de expedición', docComune: 'Municipio de expedición (Italia)', fronte: 'Foto anverso', retro: 'Foto reverso', fotoOpz: 'Foto del documento (opcional)',
+    cerca: 'Escribe y elige de la lista', contatto: 'Contacto', email: 'Email', tel: 'Teléfono', facolt: 'opcional',
+    privacy: 'Doy mi consentimiento al tratamiento de los datos para la comunicación obligatoria a la policía italiana (art. 109 TULPS). Las fotos de los documentos se borran en 30 días tras la salida.',
+    invia: 'Enviar datos', invio: 'Enviando…', grazie: '¡Gracias!', grazieT: 'Hemos recibido vuestros datos. ¡Hasta pronto!',
+    errCampi: 'Revisa los campos marcados en rojo.', errPrivacy: 'Se necesita el consentimiento.', errRete: 'Error de envío, inténtalo de nuevo.',
+    errLink: 'Este enlace no es válido. Contacta con el anfitrión.', foto: 'Hacer o subir', fotoReq: 'Se necesitan las fotos del documento del titular.' },
+  fr: { title: 'Check-in en ligne', sub: 'La loi italienne (art. 109 TULPS) nous oblige à déclarer chaque voyageur à la police. Cela prend 3 minutes.',
+    arrivo: 'Arrivée', partenza: 'Départ', notti: 'nuits', ospiti: 'Combien êtes-vous ?', gruppo: 'Vous voyagez en', famiglia: 'Famille', gruppoA: 'Amis / groupe',
+    ospite: 'Voyageur', tu: 'Vous (titulaire de la réservation)', cognome: 'Nom', nome: 'Prénom', sesso: 'Sexe', m: 'Homme', f: 'Femme', nascita: 'Date de naissance',
+    statoN: 'Pays de naissance', comuneN: 'Commune de naissance (Italie)', cittad: 'Nationalité', doc: 'Pièce d\'identité', docTipo: 'Type de document', docNum: 'Numéro du document',
+    docPaese: 'Pays de délivrance', docComune: 'Commune de délivrance (Italie)', fronte: 'Photo recto', retro: 'Photo verso', fotoOpz: 'Photo du document (facultative)',
+    cerca: 'Tapez et choisissez dans la liste', contatto: 'Contact', email: 'Email', tel: 'Téléphone', facolt: 'facultatif',
+    privacy: 'J\'accepte le traitement de ces données pour la déclaration obligatoire à la police italienne (art. 109 TULPS). Les photos des documents sont supprimées dans les 30 jours suivant le départ.',
+    invia: 'Envoyer', invio: 'Envoi…', grazie: 'Merci !', grazieT: 'Nous avons bien reçu vos données. À bientôt !',
+    errCampi: 'Vérifiez les champs en rouge.', errPrivacy: 'Le consentement est nécessaire.', errRete: 'Échec de l\'envoi, réessayez.',
+    errLink: 'Ce lien n\'est pas valide. Contactez votre hôte.', foto: 'Prendre ou charger', fotoReq: 'Les photos du document du titulaire sont requises.' },
+  de: { title: 'Online-Check-in', sub: 'Das italienische Gesetz (Art. 109 TULPS) verlangt, alle Gäste bei der Polizei zu melden. Es dauert 3 Minuten.',
+    arrivo: 'Anreise', partenza: 'Abreise', notti: 'Nächte', ospiti: 'Wie viele Personen?', gruppo: 'Sie reisen als', famiglia: 'Familie', gruppoA: 'Freunde / Gruppe',
+    ospite: 'Gast', tu: 'Sie (Buchende Person)', cognome: 'Nachname', nome: 'Vorname', sesso: 'Geschlecht', m: 'Männlich', f: 'Weiblich', nascita: 'Geburtsdatum',
+    statoN: 'Geburtsland', comuneN: 'Geburtsort (Italien)', cittad: 'Staatsangehörigkeit', doc: 'Ausweis', docTipo: 'Dokumentart', docNum: 'Dokumentnummer',
+    docPaese: 'Ausstellungsland', docComune: 'Ausstellungsort (Italien)', fronte: 'Foto Vorderseite', retro: 'Foto Rückseite', fotoOpz: 'Ausweisfoto (optional)',
+    cerca: 'Tippen und aus der Liste wählen', contatto: 'Kontakt', email: 'E-Mail', tel: 'Telefon', facolt: 'optional',
+    privacy: 'Ich willige in die Verarbeitung dieser Daten für die Pflichtmeldung an die italienische Polizei ein (Art. 109 TULPS). Ausweisfotos werden innerhalb von 30 Tagen nach Abreise gelöscht.',
+    invia: 'Daten senden', invio: 'Wird gesendet…', grazie: 'Danke!', grazieT: 'Wir haben Ihre Daten erhalten. Bis bald!',
+    errCampi: 'Bitte die rot markierten Felder prüfen.', errPrivacy: 'Die Einwilligung ist erforderlich.', errRete: 'Senden fehlgeschlagen, bitte erneut versuchen.',
+    errLink: 'Dieser Link ist ungültig. Bitte kontaktieren Sie den Gastgeber.', foto: 'Aufnehmen oder hochladen', fotoReq: 'Fotos des Ausweises der buchenden Person sind erforderlich.' },
+};
+// nomi stranieri comuni → nome ufficiale (tabella Polizia, in italiano)
+const ALIAS = { 'GERMANY':'GERMANIA','DEUTSCHLAND':'GERMANIA','FRANCE':'FRANCIA','SPAIN':'SPAGNA','ESPAÑA':'SPAGNA','UNITED KINGDOM':'REGNO UNITO','UK':'REGNO UNITO','GREAT BRITAIN':'REGNO UNITO',
+  'UNITED STATES':'STATI UNITI D\'AMERICA','USA':'STATI UNITI D\'AMERICA','NETHERLANDS':'PAESI BASSI','HOLLAND':'PAESI BASSI','BELGIUM':'BELGIO','SWITZERLAND':'SVIZZERA','SCHWEIZ':'SVIZZERA','SUISSE':'SVIZZERA',
+  'AUSTRIA':'AUSTRIA','ÖSTERREICH':'AUSTRIA','POLAND':'POLONIA','PORTUGAL':'PORTOGALLO','IRELAND':'IRLANDA','SWEDEN':'SVEZIA','NORWAY':'NORVEGIA','DENMARK':'DANIMARCA','FINLAND':'FINLANDIA',
+  'GREECE':'GRECIA','CZECH REPUBLIC':'REPUBBLICA CECA','CZECHIA':'REPUBBLICA CECA','HUNGARY':'UNGHERIA','ROMANIA':'ROMANIA','CROATIA':'CROAZIA','SLOVENIA':'SLOVENIA','SLOVAKIA':'SLOVACCHIA',
+  'CANADA':'CANADA','AUSTRALIA':'AUSTRALIA','NEW ZEALAND':'NUOVA ZELANDA','BRAZIL':'BRASILE','BRASIL':'BRASILE','ARGENTINA':'ARGENTINA','MEXICO':'MESSICO','MÉXICO':'MESSICO','JAPAN':'GIAPPONE',
+  'CHINA':'CINA','SOUTH KOREA':'COREA DEL SUD','KOREA':'COREA DEL SUD','INDIA':'INDIA','ISRAEL':'ISRAELE','TURKEY':'TURCHIA','UKRAINE':'UCRAINA','RUSSIA':'RUSSIA','SOUTH AFRICA':'SUD AFRICA','ITALY':'ITALIA' };
+
+// ===================== Stato =====================
+const qs = new URLSearchParams(location.search);
+const S = { lang: pickLang(), pren: null, tab: null, n: 1, gruppo: '', ospiti: [], err: '', sending: false, done: false };
+function pickLang() { const q = qs.get('lang'); if (q && T[q]) return q; const n = (navigator.language || 'it').slice(0, 2); return T[n] ? n : 'en'; }
+const t = k => T[S.lang][k] || T.it[k];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString(S.lang, { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
+const nuovoOspite = () => ({ cognome: '', nome: '', sesso: '', nascita: '', statoNascita: '', comuneNascita: '', provNascita: '', cittadinanza: '', docTipo: '', docNumero: '', docPaeseTxt: '', docLuogo: '', docComuneTxt: '', foto: [null, null], statoTxt: '', comuneTxt: '', cittTxt: '' });
+
+// ===================== Avvio =====================
+(async () => {
+  const b = qs.get('b');
+  if (!b) return fatal(t('errLink'));
+  try {
+    const [p, tab] = await Promise.all([get('prenotazione&b=' + encodeURIComponent(b)), get('tabelle')]);
+    if (!p.ok) return fatal(t('errLink'));
+    if (!tab.ok) return fatal(t('errRete'));
+    S.pren = p.p; S.tab = indicizza(tab);
+    S.n = Math.min(Math.max(p.p.ospiti || 1, 1), MAX_OSPITI);
+    S.ospiti = Array.from({ length: S.n }, nuovoOspite);
+    const parti = (p.p.ospite || '').trim().split(/\s+/);
+    if (parti.length > 1) { S.ospiti[0].nome = parti.slice(0, -1).join(' '); S.ospiti[0].cognome = parti[parti.length - 1]; }
+    else S.ospiti[0].nome = parti[0] || '';
+    riempiListe(); render();
+  } catch (e) { fatal(t('errRete')); }
+})();
+async function get(q) { const r = await fetch(API + '?a=' + q); return r.json(); }
+function fatal(msg) { $('#app').innerHTML = `<div class="center">${esc(msg)}</div>`; }
+
+function indicizza(tab) {
+  const stati = new Map(), comuni = new Map();
+  tab.stati.forEach(([c, n]) => stati.set(n.toUpperCase(), c));
+  Object.entries(ALIAS).forEach(([a, n]) => { if (stati.has(n) && !stati.has(a)) stati.set(a, stati.get(n)); });
+  tab.comuni.forEach(([c, n, p]) => comuni.set(`${n} (${p})`.toUpperCase(), { c, p }));
+  const nomeStato = new Map(tab.stati.map(([c, n]) => [c, n]));
+  return { stati, comuni, nomeStato, documenti: tab.documenti };
+}
+function riempiListe() {
+  $('#dl-stati').innerHTML = [...S.tab.stati.keys()].sort().map(n => `<option value="${esc(n)}">`).join('');
+  $('#dl-comuni').innerHTML = [...S.tab.comuni.keys()].map(n => `<option value="${esc(n)}">`).join('');
+}
+
+// ===================== Interfaccia =====================
+function render() {
+  if (S.done) { $('#app').innerHTML = topbar() + `<div class="done"><div class="ok">✓</div><h1>${t('grazie')}</h1><p>${t('grazieT')}</p></div>`; return; }
+  const p = S.pren;
+  const notti = p.partenza ? Math.round((Date.parse(p.partenza) - Date.parse(p.arrivo)) / 864e5) : null;
+  $('#app').innerHTML = topbar() + `
+    <section class="hero"><h1>${t('title')}</h1><p>${t('sub')}</p>
+      <div class="stay"><div><span>${t('arrivo')}</span><b>${fmt(p.arrivo)}</b></div>
+      <div><span>${t('partenza')}</span>${p.partenza ? `<b>${fmt(p.partenza)}</b>` : `<input type="date" id="partenza" min="${p.arrivo}" value="${esc(S.partenza || '')}" onchange="S.partenza=this.value" style="height:36px;margin-top:4px">`}</div></div>
+      ${notti ? `<p style="margin-top:10px">${p.nomeStruttura} · ${notti} ${t('notti')}</p>` : `<p style="margin-top:10px">${p.nomeStruttura}</p>`}
+    </section>
+    <h2>${t('ospiti')}</h2>
+    <div class="card"><div class="count"><button type="button" aria-label="−" onclick="setN(S.n-1)">−</button><b>${S.n}</b><button type="button" aria-label="+" onclick="setN(S.n+1)">+</button></div>
+      ${S.n > 1 ? `<label>${t('gruppo')}</label><div class="seg">${segBtn('famiglia', t('famiglia'))}${segBtn('gruppo', t('gruppoA'))}</div>` : ''}</div>
+    ${S.ospiti.map(cardOspite).join('')}
+    <h2>${t('contatto')} <span style="font-weight:500;color:var(--muted);font-size:14px">(${t('facolt')})</span></h2>
+    <div class="card"><div class="row2"><div><label>${t('email')}</label><input type="email" id="email" autocomplete="email" value="${esc(S.email || '')}"></div><div><label>${t('tel')}</label><input type="tel" id="tel" autocomplete="tel" value="${esc(S.tel || '')}"></div></div></div>
+    <label class="check"><input type="checkbox" id="privacy" ${S.privacy ? 'checked' : ''}> <span>${t('privacy')}</span></label>
+    ${S.err ? `<div class="err" role="alert">${esc(S.err)}</div>` : ''}
+    <button class="btn" id="go" onclick="invia()" ${S.sending ? 'disabled' : ''}>${S.sending ? t('invio') : t('invia')}</button>
+    <p class="mini">Antrum Loft &amp; Suite · Salerno</p>`;
+}
+function topbar() {
+  return `<div class="top"><div class="brand">ANTRUM<small>Loft &amp; Suite · Salerno</small></div>
+    <select class="lang" aria-label="Language" onchange="salva();S.lang=this.value;document.documentElement.lang=this.value;render()">
+    ${[['it', 'Italiano'], ['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch']].map(([k, l]) => `<option value="${k}" ${k === S.lang ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`;
+}
+function segBtn(v, l) { return `<button type="button" aria-pressed="${S.gruppo === v}" onclick="salva();S.gruppo='${v}';render()">${l}</button>`; }
+function setN(n) { salva(); n = Math.min(Math.max(n, 1), MAX_OSPITI); while (S.ospiti.length < n) S.ospiti.push(nuovoOspite()); S.ospiti.length = n; S.n = n; render(); }
+
+function cardOspite(o, i) {
+  const capo = i === 0, f = (k, l, type = 'text', extra = '') => `<label for="${k}${i}">${l}</label><input id="${k}${i}" type="${type}" value="${esc(o[k])}" ${extra}>`;
+  const ita = (S.tab.stati.get((o.statoTxt || '').toUpperCase()) === ITALIA);
+  const docIta = (S.tab.stati.get((o.docPaeseTxt || '').toUpperCase()) === ITALIA);
+  return `<div class="card" data-i="${i}"><h3><span class="n">${i + 1}</span>${capo ? t('tu') : t('ospite') + ' ' + (i + 1)}</h3>
+    <div class="row2"><div>${f('nome', t('nome'), 'text', 'autocomplete="given-name"')}</div><div>${f('cognome', t('cognome'), 'text', 'autocomplete="family-name"')}</div></div>
+    <div class="row2"><div><label for="sesso${i}">${t('sesso')}</label><select id="sesso${i}"><option value=""></option><option value="1" ${o.sesso === '1' ? 'selected' : ''}>${t('m')}</option><option value="2" ${o.sesso === '2' ? 'selected' : ''}>${t('f')}</option></select></div>
+      <div>${f('nascita', t('nascita'), 'date', `max="${new Date().toISOString().slice(0, 10)}"`)}</div></div>
+    <label for="statoTxt${i}">${t('statoN')}</label><input id="statoTxt${i}" list="dl-stati" value="${esc(o.statoTxt)}" placeholder="${t('cerca')}" autocomplete="off" onchange="salva();render()">
+    ${ita ? `<label for="comuneTxt${i}">${t('comuneN')}</label><input id="comuneTxt${i}" list="dl-comuni" value="${esc(o.comuneTxt)}" placeholder="${t('cerca')}" autocomplete="off">` : ''}
+    <label for="cittTxt${i}">${t('cittad')}</label><input id="cittTxt${i}" list="dl-stati" value="${esc(o.cittTxt)}" placeholder="${t('cerca')}" autocomplete="off">
+    ${capo ? `<h3 style="margin-top:20px">${t('doc')}</h3>
+      <label for="docTipo${i}">${t('docTipo')}</label><select id="docTipo${i}"><option value=""></option>${S.tab.documenti.map(([c, n]) => `<option value="${esc(c)}" ${o.docTipo === c ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+      ${f('docNumero', t('docNum'), 'text', 'autocapitalize="characters"')}
+      <label for="docPaeseTxt${i}">${t('docPaese')}</label><input id="docPaeseTxt${i}" list="dl-stati" value="${esc(o.docPaeseTxt)}" placeholder="${t('cerca')}" autocomplete="off" onchange="salva();render()">
+      ${docIta ? `<label for="docComuneTxt${i}">${t('docComune')}</label><input id="docComuneTxt${i}" list="dl-comuni" value="${esc(o.docComuneTxt)}" placeholder="${t('cerca')}" autocomplete="off">` : ''}
+      <div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}</div>`
+    : `<label>${t('fotoOpz')}</label><div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}</div>`}
+  </div>`;
+}
+function ph(i, j, l) {
+  const f = S.ospiti[i].foto[j];
+  return `<div class="ph" id="ph${i}_${j}">${f ? `<img src="data:image/jpeg;base64,${f.b64}" alt="${esc(l)}">` : `<span>📷<br>${esc(l)}<br><small style="font-weight:500">${t('foto')}</small></span>`}
+    <input type="file" accept="image/*" aria-label="${esc(l)}" onchange="foto(${i},${j},this.files[0])"></div>`;
+}
+
+// legge i campi nello stato (prima di ogni render)
+function salva() {
+  S.ospiti.forEach((o, i) => {
+    ['nome', 'cognome', 'sesso', 'nascita', 'statoTxt', 'comuneTxt', 'cittTxt', 'docTipo', 'docNumero', 'docPaeseTxt', 'docComuneTxt'].forEach(k => { const el = document.getElementById(k + i); if (el) o[k] = el.value.trim(); });
+  });
+  const pa = $('#partenza'); if (pa) S.partenza = pa.value;
+  ['email', 'tel'].forEach(k => { const el = $('#' + k); if (el) S[k] = el.value.trim(); });
+  const pv = $('#privacy'); if (pv) S.privacy = pv.checked;
+}
+
+async function foto(i, j, file) {
+  if (!file) return;
+  salva();
+  try { S.ospiti[i].foto[j] = await comprimi(file); } catch (e) { S.err = t('errRete'); }
+  render();
+}
+function comprimi(file) {
+  return new Promise((ok, ko) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok({ mime: 'image/jpeg', b64: c.toDataURL('image/jpeg', .82).split(',')[1] });
+    };
+    img.onerror = ko; img.src = url;
+  });
+}
+
+// ===================== Invio =====================
+async function invia() {
+  salva(); S.err = '';
+  document.querySelectorAll('[aria-invalid]').forEach(e => e.removeAttribute('aria-invalid'));
+  const bad = [];
+  const mark = id => bad.push(id);
+  const ospiti = S.ospiti.map((o, i) => {
+    const sN = S.tab.stati.get(o.statoTxt.toUpperCase()), cit = S.tab.stati.get(o.cittTxt.toUpperCase());
+    const com = S.tab.comuni.get(o.comuneTxt.toUpperCase());
+    const out = { cognome: o.cognome, nome: o.nome, sesso: o.sesso, nascita: o.nascita, statoNascita: sN || '', cittadinanza: cit || '', comuneNascita: com ? com.c : '', provNascita: com ? com.p : '', foto: o.foto.filter(Boolean) };
+    if (!o.nome) mark('nome' + i); if (!o.cognome) mark('cognome' + i); if (!o.sesso) mark('sesso' + i); if (!o.nascita) mark('nascita' + i);
+    if (!sN) mark('statoTxt' + i); if (!cit) mark('cittTxt' + i); if (sN === ITALIA && !com) mark('comuneTxt' + i);
+    if (i === 0) {
+      const dp = S.tab.stati.get(o.docPaeseTxt.toUpperCase()), dc = S.tab.comuni.get(o.docComuneTxt.toUpperCase());
+      out.docTipo = o.docTipo; out.docNumero = o.docNumero; out.docLuogo = dp === ITALIA ? (dc ? dc.c : '') : (dp || '');
+      if (!o.docTipo) mark('docTipo0'); if (!o.docNumero) mark('docNumero0'); if (!dp) mark('docPaeseTxt0'); if (dp === ITALIA && !dc) mark('docComuneTxt0');
+    }
+    return out;
+  });
+  const fotoMancanti = !S.ospiti[0].foto[0] || !S.ospiti[0].foto[1];
+  if (!S.pren.partenza && !S.partenza) mark('partenza');
+  if (S.n > 1 && !S.gruppo) { S.err = t('errCampi'); }
+  if (bad.length) S.err = t('errCampi');
+  else if (fotoMancanti) S.err = t('fotoReq');
+  else if (!S.privacy) S.err = t('errPrivacy');
+  if (S.err) {
+    render();
+    bad.forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-invalid', 'true'); });
+    if (fotoMancanti && !bad.length) ['ph0_0', 'ph0_1'].forEach(id => { if (!S.ospiti[0].foto[+id.slice(-1)]) document.getElementById(id).classList.add('bad'); });
+    (document.querySelector('[aria-invalid=true]') || document.querySelector('.err')).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  S.sending = true; render();
+  try {
+    const body = { b: qs.get('b'), partenza: S.partenza || '', gruppo: S.n > 1 ? S.gruppo : 'singolo', ospiti, lingua: S.lang,
+      contatto: { email: S.email || '', tel: S.tel || '' } };
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.errore || 'errore');
+    S.done = true; render(); scrollTo(0, 0);
+  } catch (e) {
+    S.sending = false; S.err = t('errRete') + (e.message && e.message !== 'errore' ? ' (' + e.message + ')' : ''); render();
+  }
+}
+</script>
+</body>
+</html>
