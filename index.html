@@ -91,6 +91,9 @@ h2{margin:0;font-size:17px;font-weight:700}
 .item .s{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .item .amt{font-weight:700;font-size:15px;white-space:nowrap}
 .plus{color:var(--green)} .minus{color:var(--red-d)}
+.ckpill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px}
+.steps{display:flex;flex-direction:column;gap:0}.step{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line2)}.step:first-child{border-top:0}
+.step .k{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;flex-shrink:0}
 .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;letter-spacing:.02em}
 .daylab{font-size:12px;font-weight:700;color:var(--muted);padding:14px 4px 8px}
 .datebox{width:44px;display:flex;flex-direction:column;align-items:center;line-height:1.1;flex-shrink:0}
@@ -127,6 +130,10 @@ nav.bottom .in{max-width:480px;width:100%;display:flex;justify-content:space-aro
 nav.bottom a,nav.bottom button.n{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px;min-height:44px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;background:none;border:0;padding:0}
 nav.bottom [aria-current="page"]{color:var(--ink);font-weight:800}
 .fab{width:56px;height:56px;border-radius:18px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;border:0}
+nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}
+.ckg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ckg img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:12px;background:var(--ground);cursor:zoom-in}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.zoom img{max-width:100%;max-height:100%;border-radius:8px}
+.ckc{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:0}
 
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(18,26,33,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
@@ -175,6 +182,7 @@ nav.bottom [aria-current="page"]{color:var(--ink);font-weight:800}
 const SUPABASE_URL = 'https://tgswoagxubpglnirsuxi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uwFBcSGHc5PSQp-Ma2nO5w_1BjhAZ4Z';   // chiave pubblica: i dati restano protetti dal PIN
 const LOGIN_EMAIL  = 'antrumloft@gmail.com';
+const CHECKIN_URL = 'https://enricode89.github.io/tracker-antrum/checkin/';
 const PIN_LEN = 6;
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
@@ -195,6 +203,7 @@ const ICON = {
   cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 2v4"/><path d="M16 2v4"/>',
   swap:'<path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/>',
   plus:'<path d="M12 5v14"/><path d="M5 12h14"/>',
+  idcard:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16a3.4 3.4 0 0 1 6.4 0"/><path d="M14.5 10h4"/><path d="M14.5 14h3"/>',
   left:'<path d="M15 18l-6-6 6-6"/>', right:'<path d="M9 18l6-6-6-6"/>',
   x:'<path d="M6 6l12 12"/><path d="M18 6L6 18"/>', check:'<path d="M5 12l5 5L20 7"/>',
   alert:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
@@ -370,20 +379,19 @@ function periodBar() {
 }
 const periodName = () => S.mode === 'anno' ? String(S.y) : `${MESI[S.m]} ${S.y}`;
 
-function header(title, eye = false) {
+function header(title, eye = false, add = false) {
   return `<header class="top">
     <div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${title}</h1></div>
     <div class="row" style="gap:8px">${eye ? `<button class="iconbtn" aria-label="${HIDE ? 'Mostra importi' : 'Nascondi importi'}" aria-pressed="${HIDE}" onclick="toggleHide()">${ic(HIDE ? 'eyeoff' : 'eye', 18)}</button>` : ''}
-    <button class="iconbtn" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button></div></div>
+    <button class="iconbtn" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button>${add ? `<button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova entrata o spesa" onclick="openNuovo()">${ic('plus', 20, 2.6)}</button>` : ''}</div></div>
     ${periodBar()}
   </header>`;
 }
 
 function navBar() {
-  const it = (tab, label, icon) => `<button class="n" ${S.tab === tab ? 'aria-current="page"' : ''} onclick="go('${tab}')">${ic(icon, 22)}${label}</button>`;
-  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'grid')}${it('cal', 'Calendario', 'cal')}
-    <button class="fab" aria-label="Nuovo movimento" onclick="openNuovo()">${ic('plus', 24, 2.4)}</button>
-    ${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
+  const it = (tab, label, icon, n) => `<button class="n" ${S.tab === tab ? 'aria-current="page"' : ''} aria-label="${label}${n ? ' (' + n + ' da inviare)' : ''}" onclick="go('${tab}')">${ic(icon, 22)}${label}${n ? `<span class="nbadge">${n}</span>` : ''}</button>`;
+  const daInv = ckLista().filter(b => ckStato(b) === 'ricevuto').length;
+  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'grid')}${it('cal', 'Calendario', 'cal')}${it('ck', 'Check-in', 'idcard', daInv)}${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
 }
 
 function viewHome() {
@@ -642,7 +650,7 @@ function viewMov() {
     .map(b => ({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + CANALE[b.source], s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}`, a: b.payout, missing: true, color: colorOf(b) })).sort((a, b) => b.d.localeCompare(a.d));
   const totIn = list.filter(x => x.kind === 'in').reduce((s, x) => s + (+x.a || 0), 0), totOut = list.filter(x => x.kind === 'out').reduce((s, x) => s + (+x.a || 0), 0);
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.movFilter='${k}';render()">${l}</button>`;
-  let html = header('Movimenti') + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
+  let html = header('Movimenti', false, true) + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
     <button class="chip" onclick="go('fisse')">${ic('repeat', 14)} Spese fisse</button>
     <button class="chip" onclick="go('per')">${ic('trend', 14)} Analisi periodo</button></div>
     ${f !== 'completare' ? `<div class="grid2 mt"><div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Entrate</div><div style="font-size:20px;font-weight:800;color:var(--green-d)">${eur(totIn)}</div></div>
@@ -710,7 +718,8 @@ function detRow(b, lab, extra, outline) {
   const n = diffDays(b.checkin, b.checkout);
   return `<button class="item" onclick="openBooking('${b.id}')"><span class="dot" style="${outline ? 'border:2px solid ' + colorOf(b) : 'background:' + colorOf(b)}"></span>
     <div style="flex:1;min-width:0"><div class="s" style="font-weight:700">${lab}</div><div class="t">${esc(b.guest_name || 'Ospite')}</div>
-    <div class="s">${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${dLabel(b.checkin)} – ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}${extra ? ' · ' + extra : ''}</div></div>
+    <div class="s">${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${dLabel(b.checkin)} – ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}${extra ? ' · ' + extra : ''}</div>
+    <div style="margin-top:6px">${ckPill(b)}</div></div>
     <span class="amt">${b.payout != null ? eur(b.payout) : ''}</span></button>`;
 }
 function shiftMonth(d) { S.m += d; if (S.m < 0) { S.m = 11; S.y--; } if (S.m > 11) { S.m = 0; S.y++; } S.calDay = isoOf(S.y, S.m, 1); render(); }
@@ -873,17 +882,134 @@ function openBooking(id) {
       <label class="field">Importo incassato<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.payout != null ? String(b.payout).replace('.', ',') : ''}" placeholder="0,00"></div></label>
       <div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${b.checkin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${b.checkout || ''}"></label></div>
       <div class="grid2"><label class="field">Struttura${propSel(b.property)}</label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${b.guests ?? ''}"></label></div>
-      <label class="field">Nome ospite<input id="f_name" value="${esc(b.guest_name || '')}"></label>
+      <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(b.guest_name || '')}"></label><label class="field">Telefono<input id="f_tel" type="tel" inputmode="tel" value="${esc(b.guest_phone || '')}" placeholder="+39 …"></label></div>
       <label class="field">Note<textarea id="f_note">${esc(b.note || '')}</textarea></label>
+      ${b.status === 'confermata' ? ckBlock(b) : ''}
       ${b.guest_total != null ? `<p class="small muted" style="margin:0">L'ospite ha pagato ${eur(b.guest_total)} · tassa di soggiorno ${eur(b.tourist_tax)}</p>` : ''}
       <button class="btn" onclick="saveBooking('${b.id}')">Salva</button>
       ${b.manual && !b.email_id ? `<button class="btn ghost" onclick="delBooking('${b.id}')">Elimina prenotazione</button>` : ''}
     </div>`);
+  if (b.status === 'confermata' && b.checkin_url && ckStato(b) !== 'attesa') caricaCkDati(b);
+}
+// stato check-in Questura: null → ricevuto (ospite ha compilato) → inviato (schedine in Questura)
+const dtLabel = ts => { const d = new Date(ts); return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
+function ckStato(b) { return b.checkin_sent_at ? 'inviato' : b.checkin_received_at ? 'ricevuto' : 'attesa'; }
+function ckPill(b) {
+  const st = ckStato(b);
+  const m = { attesa: ['#F1F2EF', '#5E6670', 'Check-in da fare'], ricevuto: ['#FFF4D6', '#8A5A00', 'Dati ricevuti · da inviare'], inviato: ['#E2F3E8', '#15633A', 'Inviato in Questura ✓'] }[st];
+  return `<span class="ckpill" style="background:${m[0]};color:${m[1]}">${m[2]}</span>`;
+}
+function ckBlock(b) {
+  const st = ckStato(b);
+  const k = (ok, n, col) => `<span class="k" style="background:${ok ? col : '#F1F2EF'};color:${ok ? '#fff' : 'var(--muted)'}">${ok ? '✓' : n}</span>`;
+  const futuro = b.checkout >= todayIso();
+  return `<div class="card stack" style="gap:6px;background:#fff">
+    <div class="between"><b style="font-size:15px">Check-in Questura</b>${ckPill(b)}</div>
+    <div class="steps">
+      <div class="step">${k(st !== 'attesa', 1, '#1E7A45')}<div style="flex:1;min-width:0"><b style="font-size:14px">Dati dell'ospite</b>
+        <div class="small muted">${st === 'attesa' ? 'Non ancora compilati. Manda il link all\'ospite:' : 'Ricevuti il ' + dtLabel(b.checkin_received_at) + (b.checkin_guests ? ' · ' + b.checkin_guests + ' ospiti' : '')}</div>
+        ${st === 'attesa' && futuro ? `<p class="small" style="margin:8px 0;white-space:pre-line;background:var(--ground);border-radius:12px;padding:10px">${esc(msgCheckin(b))}</p>
+        <div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:46px;font-size:15px" href="${waLink(b)}" target="_blank" rel="noopener">WhatsApp</a>
+        <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:46px;font-size:15px" onclick="copiaCheckin('${b.id}')">Copia</button></div>` : ''}</div></div>
+      <div class="step">${k(st === 'inviato', 2, '#1E7A45')}<div style="flex:1;min-width:0"><b style="font-size:14px">Invio alla Questura</b>
+        <div class="small muted">${st === 'inviato' ? 'Inviato il ' + dtLabel(b.checkin_sent_at) + ' · ricevuta via email' : st === 'ricevuto' ? (b.checkin <= todayIso() ? 'Pronto da inviare' : 'Si può inviare dal ' + dLabel(b.checkin)) : 'Dopo che l\'ospite ha compilato'}</div>
+        ${st === 'ricevuto' && b.checkin_url ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:46px;font-size:15px;margin-top:8px" href="${esc(b.checkin_url)}" target="_blank" rel="noopener">Rivedi e invia alla Questura</a>` : ''}</div></div>
+    </div>
+    ${b.checkin_url && st !== 'attesa' ? '<div id="ckdati" class="small muted" style="padding:8px 0">Carico dati e documenti…</div>' : ''}</div>`;
+}
+// dati compilati dall'ospite + foto dei documenti (dallo script Questura, link firmato)
+const CKD = {};
+async function caricaCkDati(b) {
+  const el = () => $('#ckdati');
+  try {
+    let d = CKD[b.id];
+    if (!d) { const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio'); d = await fetch(u).then(r => r.json()); }
+    if (!d.ok) throw new Error(d.errore || 'non disponibili');
+    CKD[b.id] = d;
+    if (el()) el().outerHTML = ckDatiHtml(d, b);
+  } catch (e) { if (el()) el().textContent = 'Dati non caricati: ' + e.message; }
+}
+function ckDatiHtml(d, b) {
+  const r = (k, v) => v ? `<div style="display:flex;justify-content:space-between;gap:12px"><span class="muted" style="flex-shrink:0">${k}</span><span style="text-align:right;font-weight:600">${esc(v)}</span></div>` : '';
+  const ruolo = i => d.ospiti.length === 1 ? 'Ospite singolo' : i ? (d.gruppo === 'famiglia' ? 'Familiare' : 'Membro gruppo') : (d.gruppo === 'famiglia' ? 'Capofamiglia' : 'Capogruppo');
+  const scadute = b.checkout && new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10) >= b.checkout;
+  return `<div class="stack" style="gap:10px;margin-top:6px">
+    <b style="font-size:14px">Dati compilati · ${d.ospiti.length} ${d.ospiti.length === 1 ? 'ospite' : 'ospiti'}${d.modificato ? ' <span class="badge" style="background:var(--amber-t);color:var(--amber-d)">AGGIORNATI DALL\'OSPITE</span>' : ''}</b>
+    ${d.giaInviati && d.giaInviati.length && d.stato !== 'inviata' ? `<div class="small muted">Già in Questura dall'invio precedente: ${esc(d.giaInviati.join(', '))}</div>` : ''}
+    ${d.errori && d.errori.length ? `<div class="alert" style="background:var(--red-t);color:var(--red-d)">Ultimo invio rifiutato: ${esc(d.errori.join(' · '))}</div>` : ''}
+    ${d.ospiti.map((g, i) => `<div style="border:1px solid var(--line);border-radius:16px;padding:12px" class="stack">
+      <div class="between"><b>${esc(g.nome)}</b><span class="small muted">${ruolo(i)}</span></div>
+      <div class="small stack" style="gap:4px">${r('Sesso', g.sesso)}${r('Nato il', g.nascita)}${r('Luogo di nascita', g.luogoNascita)}${r('Cittadinanza', g.cittadinanza)}${r('Documento', g.documento)}</div>
+      ${g.foto.length ? `<div class="ckg">${g.foto.map(f => `<img src="${f.src}" alt="${esc(f.nome)}" onclick="zoomFoto(this.src)">`).join('')}</div>` : i === 0 ? `<div class="small muted">${scadute ? 'Foto eliminate 30 giorni dopo la partenza (privacy)' : 'Nessuna foto'}</div>` : ''}
+    </div>`).join('')}
+    ${d.contatto && (d.contatto.email || d.contatto.tel) ? `<div class="small muted">Contatto: ${esc([d.contatto.email, d.contatto.tel].filter(Boolean).join(' · '))}</div>` : ''}
+    ${d.linkModifica && b.checkout >= todayIso() ? `<div style="border-top:1px solid var(--line2);padding-top:10px" class="stack">
+      <b style="font-size:14px">Dati da correggere o persone da aggiungere?</b>
+      <div class="small muted">Rimanda il link all'ospite: trova il modulo già compilato, corregge e reinvia. I nuovi dati sostituiscono questi.${d.giaInviati && d.giaInviati.length ? ' Chi è già stato inviato in Questura non verrà inviato due volte.' : ''}</div>
+      <div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b, msgModifica(b, d.linkModifica))}" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" onclick="condividi(msgModifica(S.data.bookings.find(x => x.id === '${b.id}'), CKD['${b.id}'].linkModifica))">Copia link</button></div></div>` : ''}
+  </div>`;
+}
+function msgModifica(b, link) {
+  const nome = (b.guest_name || '').trim().split(/\s+/)[0] || '';
+  return `Ciao ${nome}, ecco il link per correggere o completare i dati del check-in (puoi anche aggiungere persone). Trovi già tutto compilato: modifica e premi "Invia le modifiche".\n${link}`;
+}
+function zoomFoto(src) {
+  const z = document.createElement('div'); z.className = 'zoom'; z.setAttribute('role', 'dialog'); z.setAttribute('aria-label', 'Foto documento, tocca per chiudere');
+  z.innerHTML = `<img src="${src}" alt="">`; z.onclick = () => z.remove(); document.body.appendChild(z);
+}
+// sezione Check-in: prenotazioni in corso e in arrivo + inviate negli ultimi 30 giorni
+function ckLista() {
+  const oggi = todayIso(), da30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  return S.data.bookings.filter(b => b.status === 'confermata' && b.checkin && ((b.checkout || b.checkin) >= oggi || (b.checkin_sent_at && b.checkin >= da30)));
+}
+function viewCk() {
+  const all = ckLista(), f = S.ckFilter || 'dafare';
+  const inv = all.filter(b => ckStato(b) === 'ricevuto').sort((a, b) => a.checkin.localeCompare(b.checkin));
+  const att = all.filter(b => ckStato(b) === 'attesa').sort((a, b) => a.checkin.localeCompare(b.checkin));
+  const ok = all.filter(b => ckStato(b) === 'inviato').sort((a, b) => b.checkin.localeCompare(a.checkin));
+  const box = (k, n, l, bg, fg) => `<button class="card" aria-pressed="${f === k}" onclick="S.ckFilter='${k}';render()" style="padding:12px 14px;text-align:left;border:0;background:${bg};color:${fg};${f === k ? 'box-shadow:inset 0 0 0 2px ' + fg : ''}"><div style="font-size:24px;font-weight:800">${n}</div><div class="small" style="font-weight:700">${l}</div></button>`;
+  const card = b => {
+    const d = parse(b.checkin), st = ckStato(b), n = b.checkout ? diffDays(b.checkin, b.checkout) : 0;
+    return `<div class="card stack" style="padding:12px;gap:10px">
+      <button class="ckc" onclick="openBooking('${b.id}')"><div class="datebox"><span>${GG[d.getUTCDay()]}</span><b>${d.getUTCDate()}</b><span>${MESI_B[d.getUTCMonth()]}</span></div>
+        <div style="flex:1;min-width:0"><div style="font-weight:700">${esc(b.guest_name || 'Ospite')}</div>
+        <div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${PROP[b.property] || '?'} · ${isManual(b) ? 'Diretta' : CANALE[b.source]}${n ? ' · ' + n + (n === 1 ? ' notte' : ' notti') : ''}</div>
+        <div style="margin-top:6px">${ckPill(b)}</div></div>${ic('right', 18)}</button>
+      ${st === 'attesa' ? `<div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b)}" target="_blank" rel="noopener">WhatsApp</a>
+        <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" onclick="copiaCheckin('${b.id}')">Copia link</button></div>` : ''}
+      ${st === 'ricevuto' && b.checkin_url ? (b.checkin <= todayIso() ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:42px;font-size:14px" href="${esc(b.checkin_url)}" target="_blank" rel="noopener">Rivedi e invia alla Questura</a>`
+        : `<div class="small muted" style="text-align:center">Si può inviare dal ${dLabel(b.checkin)}</div>`) : ''}
+      ${st === 'inviato' ? `<div class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</div>` : ''}</div>`;
+  };
+  const sez = (t, l, vuoto) => `<h2 style="font-size:15px;margin:18px 4px 8px">${t}</h2><div class="stack" style="gap:8px">${l.length ? l.map(card).join('') : `<div class="empty">${vuoto}</div>`}</div>`;
+  let html = `<header class="top"><div class="brand">Antrum Loft &amp; Suite</div><h1>Check-in</h1><p class="small muted" style="margin:4px 0 0">Schedine alloggiati per la Questura</p></header>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${box('dafare', inv.length + att.length, 'Da fare', 'var(--amber-t)', 'var(--amber-d)')}${box('inviati', ok.length, 'Inviati', 'var(--green-t)', 'var(--green-d)')}${box('tutti', all.length, 'Tutti', '#fff', 'var(--ink)')}</div>`;
+  if (f === 'dafare') html += sez('Da inviare alla Questura', inv, 'Niente da inviare') + sez('In attesa dei dati dell\'ospite', att, 'Tutti gli ospiti hanno compilato');
+  else if (f === 'inviati') html += sez('Inviati in Questura', ok, 'Nessun invio negli ultimi 30 giorni');
+  else html += sez('Tutte le prenotazioni', [...all].sort((a, b) => a.checkin.localeCompare(b.checkin)), 'Nessuna prenotazione in arrivo');
+  return html;
+}
+function waLink(b, testo) {
+  let n = String(b.guest_phone || '').replace(/[^\d+]/g, '');
+  if (n.startsWith('00')) n = '+' + n.slice(2);
+  if (n && !n.startsWith('+')) n = '+39' + n;          // numero italiano senza prefisso
+  return 'https://wa.me/' + n.replace('+', '') + '?text=' + encodeURIComponent(testo || msgCheckin(b));
+}
+function msgCheckin(b) {
+  const d = iso => { const [y, m, g] = iso.split('-'); return `${g}/${m}/${y}`; };
+  const nome = (b.guest_name || '').trim().split(/\s+/)[0] || '';
+  return `Ciao ${nome}, ecco il link dove puoi effettuare il check-in per il soggiorno dal ${d(b.checkin)}${b.checkout ? ' al ' + d(b.checkout) : ''} nella struttura Antrum ${PROP[b.property] || ''}:\n${CHECKIN_URL}?b=${b.id}`;
+}
+async function copiaCheckin(id) { return condividi(msgCheckin(S.data.bookings.find(x => x.id === id))); }
+async function condividi(text) {
+  try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Messaggio copiato'); } catch (e) { toast('Copia non riuscita'); }
 }
 async function saveBooking(id) {
   const amt = $('#f_amt').value.trim();
   const upd = { payout: amt === '' ? null : num(amt), checkin: $('#f_in').value, checkout: $('#f_out').value || null, property: $('#f_prop').value,
-    guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_name: $('#f_name').value.trim() || null, note: $('#f_note').value.trim() || null };
+    guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_name: $('#f_name').value.trim() || null, guest_phone: $('#f_tel').value.trim() || null, note: $('#f_note').value.trim() || null };
   if (upd.checkout && upd.checkout <= upd.checkin) return toast('Il check-out deve essere dopo il check-in');
   const { error } = await sb.from('bookings').update(upd).eq('id', id);
   if (error) return toast('Non salvato: ' + error.message);
@@ -932,7 +1058,7 @@ function drawNuovo() {
   const cats = sp ? Object.entries(CAT_SPESA).map(([k, c]) => ({ k, l: c.l, i: c.i, bg: c.bg, fg: c.fg }))
     : [{ k: 'airbnb', l: 'Prenotazione Airbnb', i: 'cal', bg: '#FFF4D0', fg: '#6B4E00' }, { k: 'booking', l: 'Prenotazione Booking', i: 'cal', bg: '#DCE8FA', fg: '#0B3F8A' }, { k: 'diretta', l: 'Prenotazione diretta', i: 'cash', bg: '#E2F3E8', fg: '#17633A' }];
   const keep = id => { const el = $('#' + id); return el ? el.value : ''; };
-  const v = { amt: keep('f_amt'), date: keep('f_date') || todayIso(), note: keep('f_note'), cin: keep('f_in') || todayIso(), cout: keep('f_out'), name: keep('f_name'), guests: keep('f_guests') };
+  const v = { amt: keep('f_amt'), date: keep('f_date') || todayIso(), note: keep('f_note'), cin: keep('f_in') || todayIso(), cout: keep('f_out'), name: keep('f_name'), guests: keep('f_guests'), tel: keep('f_tel') };
   sheet(sheetHead(sp ? 'Nuova spesa' : 'Nuova entrata') + `<div class="stack" style="gap:18px">
     <div class="seg"><button aria-pressed="${sp}" onclick="N.tipo='spesa';N.cat='spese';N.prop=null;drawNuovo()">Spesa</button><button aria-pressed="${!sp}" onclick="N.tipo='entrata';N.cat='diretta';N.prop='loft';drawNuovo()">Entrata</button></div>
     <label class="field">Importo<div class="money" style="border-color:${acc}"><span style="color:${acc}">€</span><input id="f_amt" inputmode="decimal" placeholder="0,00" value="${esc(v.amt)}"></div></label>
@@ -941,7 +1067,8 @@ function drawNuovo() {
     ${sp ? `<div class="grid2"><label class="field">Data<input id="f_date" type="date" value="${v.date}"></label><label class="field">Nota<input id="f_note" value="${esc(v.note)}" placeholder="facoltativa"></label></div>
       <label class="check"><input type="checkbox" id="f_rep"><span style="flex:1">Ripeti ogni mese<br><span class="small muted" style="font-weight:500">La salva tra le spese fisse</span></span></label>`
     : `<div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${v.cin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${v.cout}"></label></div>
-      <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(v.name)}"></label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${esc(v.guests)}"></label></div>`}
+      <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(v.name)}"></label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${esc(v.guests)}"></label></div>
+      <label class="field">Telefono ospite <span class="muted" style="font-weight:500">(per mandargli il link check-in su WhatsApp)</span><input id="f_tel" type="tel" inputmode="tel" placeholder="+39 …" value="${esc(v.tel)}"></label>`}
     <button class="btn" style="background:${acc}" onclick="saveNuovo()">Salva</button></div>`);
 }
 function pickCat(k) { N.cat = k; drawNuovo(); }
@@ -967,11 +1094,12 @@ async function saveNuovo() {
   const cin = $('#f_in').value, cout = $('#f_out').value;
   if (!cout || cout <= cin) return toast('Inserisci un check-out dopo il check-in');
   const row = { source: N.cat, code: 'M-' + Date.now(), manual: true, property: N.prop, checkin: cin, checkout: cout, payout: amount,
-    guest_name: $('#f_name').value.trim() || null, guests: $('#f_guests').value ? +$('#f_guests').value : null, status: 'confermata' };
+    guest_name: $('#f_name').value.trim() || null, guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_phone: $('#f_tel').value.trim() || null, status: 'confermata' };
   const { data, error } = await sb.from('bookings').insert(row).select();
   if (error) return toast('Non salvata: ' + error.message);
   S.data.bookings.push(data[0]); S.data.bookings.sort((a, b) => a.checkin.localeCompare(b.checkin));
   closeSheet(); toast('Prenotazione salvata'); render();
+  openBooking(data[0].id);   // subito la scheda, con il link check-in da mandare
 }
 
 function openFixed(id) {
@@ -1019,7 +1147,7 @@ async function endFixed(id) {
 // =====================================================================
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 function render() {
-  const v = { home: viewHome, cal: viewCal, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
+  const v = { home: viewHome, cal: viewCal, ck: viewCk, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
