@@ -1019,7 +1019,7 @@ function waLink(b, testo) {
 function msgCheckin(b) {
   const d = iso => { const [y, m, g] = iso.split('-'); return `${g}/${m}/${y}`; };
   const nome = (b.guest_name || '').trim().split(/\s+/)[0] || '';
-  return `Ciao ${nome}, ecco il link dove puoi effettuare il check-in per il soggiorno dal ${d(b.checkin)}${b.checkout ? ' al ' + d(b.checkout) : ''} nella struttura Antrum ${PROP[b.property] || ''}:\n${CHECKIN_URL}?b=${b.id}`;
+  return `Ciao ${nome}, ecco il link dove puoi effettuare il check-in per il soggiorno dal ${d(b.checkin)}${b.checkout ? ' al ' + d(b.checkout) : ''} nella struttura Antrum ${PROP[b.property] || ''}:\n${CHECKIN_URL}?b=${b.id}\nTieni pronto il documento: ti chiederemo foto fronte e retro e un selfie con il documento in mano.`;
 }
 async function copiaCheckin(id) { return condividi(msgCheckin(S.data.bookings.find(x => x.id === id))); }
 async function condividi(text) {
