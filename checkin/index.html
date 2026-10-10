@@ -43,6 +43,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--red);backg
 .ph{position:relative;border:1.5px dashed #C9CCC6;border-radius:14px;height:110px;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;background:#FAFAF8}
 .ph input{position:absolute;inset:0;opacity:0;height:100%}
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph.wide{grid-column:1/-1;height:150px}
 .ph.bad{border-color:var(--red);background:var(--red-t)}
 .count{display:flex;align-items:center;gap:14px}
 .count button{width:46px;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:700}
@@ -82,7 +83,7 @@ const T = {
     privacy: 'Acconsento al trattamento dei dati per la comunicazione obbligatoria alla Questura (art. 109 TULPS). I dati non vengono usati per altri scopi e le foto dei documenti vengono cancellate entro 30 giorni dalla partenza.',
     invia: 'Invia i dati', invio: 'Invio in corso…', grazie: 'Grazie!', grazieT: 'Abbiamo ricevuto i vostri dati. Ci vediamo presto!',
     errCampi: 'Controlla i campi evidenziati in rosso.', errPrivacy: 'Serve il consenso per procedere.', errRete: 'Invio non riuscito, riprova tra poco.',
-    errLink: 'Questo link non è valido. Contatta l\'host.', foto: 'Scatta o carica', fotoReq: 'Servono le foto del documento del titolare.' , modT: 'Stai modificando i dati inviati il {d}. Correggi o aggiungi persone e invia di nuovo: sostituiranno quelli precedenti.', fotoOk: 'Già caricata', inviaMod: 'Invia le modifiche', grazieMod: 'Modifiche ricevute. Grazie!' },
+    errLink: 'Questo link non è valido. Contatta l\'host.', foto: 'Scatta o carica', fotoReq: 'Servono le foto del documento e il selfie con il documento del titolare.', selfie: 'Selfie con documento', selfieT: 'Una foto del tuo viso con il documento in mano, accanto al volto e leggibile.', host: 'Compilato dall\'host', modT: 'Stai modificando i dati inviati il {d}. Correggi o aggiungi persone e invia di nuovo: sostituiranno quelli precedenti.', fotoOk: 'Già caricata', inviaMod: 'Invia le modifiche', grazieMod: 'Modifiche ricevute. Grazie!' },
   en: { title: 'Online check-in', sub: 'Italian law (art. 109 TULPS) requires us to register every guest with the police. It takes 3 minutes.',
     arrivo: 'Arrival', partenza: 'Departure', notti: 'nights', ospiti: 'How many guests?', gruppo: 'Travelling as', famiglia: 'Family', gruppoA: 'Friends / group',
     ospite: 'Guest', tu: 'You (lead guest)', cognome: 'Surname', nome: 'Given name', sesso: 'Sex', m: 'Male', f: 'Female', nascita: 'Date of birth',
@@ -92,7 +93,7 @@ const T = {
     privacy: 'I consent to the processing of these data for the mandatory notification to the Italian police (art. 109 TULPS). Data are not used for anything else and document photos are deleted within 30 days of departure.',
     invia: 'Send details', invio: 'Sending…', grazie: 'Thank you!', grazieT: 'We have received your details. See you soon!',
     errCampi: 'Please check the fields highlighted in red.', errPrivacy: 'Consent is required to continue.', errRete: 'Sending failed, please try again shortly.',
-    errLink: 'This link is not valid. Please contact your host.', foto: 'Take or upload', fotoReq: 'Photos of the lead guest\'s document are required.' , modT: 'You are editing the details sent on {d}. Fix or add guests and send again: they will replace the previous ones.', fotoOk: 'Already uploaded', inviaMod: 'Send changes', grazieMod: 'Changes received. Thank you!' },
+    errLink: 'This link is not valid. Please contact your host.', foto: 'Take or upload', fotoReq: 'Photos of the lead guest\'s document and a selfie holding it are required.', selfie: 'Selfie with ID', selfieT: 'A photo of your face holding your ID next to it, clearly readable.', host: 'Filled in by the host', modT: 'You are editing the details sent on {d}. Fix or add guests and send again: they will replace the previous ones.', fotoOk: 'Already uploaded', inviaMod: 'Send changes', grazieMod: 'Changes received. Thank you!' },
   es: { title: 'Check-in online', sub: 'La ley italiana (art. 109 TULPS) nos obliga a registrar a todos los huéspedes ante la policía. Son 3 minutos.',
     arrivo: 'Llegada', partenza: 'Salida', notti: 'noches', ospiti: '¿Cuántos sois?', gruppo: 'Viajáis como', famiglia: 'Familia', gruppoA: 'Amigos / grupo',
     ospite: 'Huésped', tu: 'Tú (titular de la reserva)', cognome: 'Apellidos', nome: 'Nombre', sesso: 'Sexo', m: 'Hombre', f: 'Mujer', nascita: 'Fecha de nacimiento',
@@ -102,7 +103,7 @@ const T = {
     privacy: 'Doy mi consentimiento al tratamiento de los datos para la comunicación obligatoria a la policía italiana (art. 109 TULPS). Las fotos de los documentos se borran en 30 días tras la salida.',
     invia: 'Enviar datos', invio: 'Enviando…', grazie: '¡Gracias!', grazieT: 'Hemos recibido vuestros datos. ¡Hasta pronto!',
     errCampi: 'Revisa los campos marcados en rojo.', errPrivacy: 'Se necesita el consentimiento.', errRete: 'Error de envío, inténtalo de nuevo.',
-    errLink: 'Este enlace no es válido. Contacta con el anfitrión.', foto: 'Hacer o subir', fotoReq: 'Se necesitan las fotos del documento del titular.' , modT: 'Estás modificando los datos enviados el {d}. Corrige o añade personas y envía de nuevo: sustituirán a los anteriores.', fotoOk: 'Ya subida', inviaMod: 'Enviar cambios', grazieMod: 'Cambios recibidos. ¡Gracias!' },
+    errLink: 'Este enlace no es válido. Contacta con el anfitrión.', foto: 'Hacer o subir', fotoReq: 'Se necesitan las fotos del documento y un selfie del titular con el documento.', selfie: 'Selfie con documento', selfieT: 'Una foto de tu cara con el documento en la mano, junto al rostro y legible.', host: 'Rellenado por el anfitrión', modT: 'Estás modificando los datos enviados el {d}. Corrige o añade personas y envía de nuevo: sustituirán a los anteriores.', fotoOk: 'Ya subida', inviaMod: 'Enviar cambios', grazieMod: 'Cambios recibidos. ¡Gracias!' },
   fr: { title: 'Check-in en ligne', sub: 'La loi italienne (art. 109 TULPS) nous oblige à déclarer chaque voyageur à la police. Cela prend 3 minutes.',
     arrivo: 'Arrivée', partenza: 'Départ', notti: 'nuits', ospiti: 'Combien êtes-vous ?', gruppo: 'Vous voyagez en', famiglia: 'Famille', gruppoA: 'Amis / groupe',
     ospite: 'Voyageur', tu: 'Vous (titulaire de la réservation)', cognome: 'Nom', nome: 'Prénom', sesso: 'Sexe', m: 'Homme', f: 'Femme', nascita: 'Date de naissance',
@@ -112,7 +113,7 @@ const T = {
     privacy: 'J\'accepte le traitement de ces données pour la déclaration obligatoire à la police italienne (art. 109 TULPS). Les photos des documents sont supprimées dans les 30 jours suivant le départ.',
     invia: 'Envoyer', invio: 'Envoi…', grazie: 'Merci !', grazieT: 'Nous avons bien reçu vos données. À bientôt !',
     errCampi: 'Vérifiez les champs en rouge.', errPrivacy: 'Le consentement est nécessaire.', errRete: 'Échec de l\'envoi, réessayez.',
-    errLink: 'Ce lien n\'est pas valide. Contactez votre hôte.', foto: 'Prendre ou charger', fotoReq: 'Les photos du document du titulaire sont requises.' , modT: 'Vous modifiez les données envoyées le {d}. Corrigez ou ajoutez des personnes puis renvoyez : elles remplaceront les précédentes.', fotoOk: 'Déjà chargée', inviaMod: 'Envoyer les modifications', grazieMod: 'Modifications reçues. Merci !' },
+    errLink: 'Ce lien n\'est pas valide. Contactez votre hôte.', foto: 'Prendre ou charger', fotoReq: 'Les photos du document et un selfie du titulaire avec son document sont requis.', selfie: 'Selfie avec la pièce', selfieT: 'Une photo de votre visage avec la pièce d\'identité à côté, bien lisible.', host: 'Rempli par l\'hôte', modT: 'Vous modifiez les données envoyées le {d}. Corrigez ou ajoutez des personnes puis renvoyez : elles remplaceront les précédentes.', fotoOk: 'Déjà chargée', inviaMod: 'Envoyer les modifications', grazieMod: 'Modifications reçues. Merci !' },
   de: { title: 'Online-Check-in', sub: 'Das italienische Gesetz (Art. 109 TULPS) verlangt, alle Gäste bei der Polizei zu melden. Es dauert 3 Minuten.',
     arrivo: 'Anreise', partenza: 'Abreise', notti: 'Nächte', ospiti: 'Wie viele Personen?', gruppo: 'Sie reisen als', famiglia: 'Familie', gruppoA: 'Freunde / Gruppe',
     ospite: 'Gast', tu: 'Sie (Buchende Person)', cognome: 'Nachname', nome: 'Vorname', sesso: 'Geschlecht', m: 'Männlich', f: 'Weiblich', nascita: 'Geburtsdatum',
@@ -122,7 +123,7 @@ const T = {
     privacy: 'Ich willige in die Verarbeitung dieser Daten für die Pflichtmeldung an die italienische Polizei ein (Art. 109 TULPS). Ausweisfotos werden innerhalb von 30 Tagen nach Abreise gelöscht.',
     invia: 'Daten senden', invio: 'Wird gesendet…', grazie: 'Danke!', grazieT: 'Wir haben Ihre Daten erhalten. Bis bald!',
     errCampi: 'Bitte die rot markierten Felder prüfen.', errPrivacy: 'Die Einwilligung ist erforderlich.', errRete: 'Senden fehlgeschlagen, bitte erneut versuchen.',
-    errLink: 'Dieser Link ist ungültig. Bitte kontaktieren Sie den Gastgeber.', foto: 'Aufnehmen oder hochladen', fotoReq: 'Fotos des Ausweises der buchenden Person sind erforderlich.' , modT: 'Sie bearbeiten die am {d} gesendeten Daten. Korrigieren oder ergänzen Sie Personen und senden Sie erneut: sie ersetzen die vorherigen.', fotoOk: 'Bereits hochgeladen', inviaMod: 'Änderungen senden', grazieMod: 'Änderungen erhalten. Danke!' },
+    errLink: 'Dieser Link ist ungültig. Bitte kontaktieren Sie den Gastgeber.', foto: 'Aufnehmen oder hochladen', fotoReq: 'Fotos des Ausweises und ein Selfie der buchenden Person mit Ausweis sind erforderlich.', selfie: 'Selfie mit Ausweis', selfieT: 'Ein Foto Ihres Gesichts mit dem Ausweis daneben, gut lesbar.', host: 'Vom Gastgeber ausgefüllt', modT: 'Sie bearbeiten die am {d} gesendeten Daten. Korrigieren oder ergänzen Sie Personen und senden Sie erneut: sie ersetzen die vorherigen.', fotoOk: 'Bereits hochgeladen', inviaMod: 'Änderungen senden', grazieMod: 'Änderungen erhalten. Danke!' },
 };
 // nomi stranieri comuni → nome ufficiale (tabella Polizia, in italiano)
 const ALIAS = { 'GERMANY':'GERMANIA','DEUTSCHLAND':'GERMANIA','FRANCE':'FRANCIA','SPAIN':'SPAGNA','ESPAÑA':'SPAGNA','UNITED KINGDOM':'REGNO UNITO','UK':'REGNO UNITO','GREAT BRITAIN':'REGNO UNITO',
@@ -140,7 +141,7 @@ const t = k => T[S.lang][k] || T.it[k];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = iso => iso ? new Date(iso + 'T12:00:00').toLocaleDateString(S.lang, { weekday: 'short', day: 'numeric', month: 'short' }) : '—';
-const nuovoOspite = () => ({ cognome: '', nome: '', sesso: '', nascita: '', statoNascita: '', comuneNascita: '', provNascita: '', cittadinanza: '', docTipo: '', docNumero: '', docPaeseTxt: '', docLuogo: '', docComuneTxt: '', foto: [null, null], statoTxt: '', comuneTxt: '', cittTxt: '' });
+const nuovoOspite = () => ({ cognome: '', nome: '', sesso: '', nascita: '', statoNascita: '', comuneNascita: '', provNascita: '', cittadinanza: '', docTipo: '', docNumero: '', docPaeseTxt: '', docLuogo: '', docComuneTxt: '', foto: [null, null, null], statoTxt: '', comuneTxt: '', cittTxt: '' });
 
 // ===================== Avvio =====================
 (async () => {
@@ -202,7 +203,7 @@ function render() {
   const p = S.pren;
   const notti = p.partenza ? Math.round((Date.parse(p.partenza) - Date.parse(p.arrivo)) / 864e5) : null;
   $('#app').innerHTML = topbar() + `
-    <section class="hero"><h1>${t('title')}</h1><p>${S.mod ? esc(t('modT').replace('{d}', new Date(S.mod.ricevuto).toLocaleDateString(S.lang))) : t('sub')}</p>
+    <section class="hero">${qs.get('host') === '1' ? `<p style="margin:0 0 6px;font-weight:700;opacity:.8">${t('host')}</p>` : ''}<h1>${t('title')}</h1><p>${S.mod ? esc(t('modT').replace('{d}', new Date(S.mod.ricevuto).toLocaleDateString(S.lang))) : t('sub')}</p>
       <div class="stay"><div><span>${t('arrivo')}</span><b>${fmt(p.arrivo)}</b></div>
       <div><span>${t('partenza')}</span>${p.partenza ? `<b>${fmt(p.partenza)}</b>` : `<input type="date" id="partenza" min="${p.arrivo}" value="${esc(S.partenza || '')}" onchange="S.partenza=this.value" style="height:36px;margin-top:4px">`}</div></div>
       ${notti ? `<p style="margin-top:10px">${p.nomeStruttura} · ${notti} ${t('notti')}</p>` : `<p style="margin-top:10px">${p.nomeStruttura}</p>`}
@@ -242,13 +243,14 @@ function cardOspite(o, i) {
       ${f('docNumero', t('docNum'), 'text', 'autocapitalize="characters"')}
       <label for="docPaeseTxt${i}">${t('docPaese')}</label><input id="docPaeseTxt${i}" list="dl-stati" value="${esc(o.docPaeseTxt)}" placeholder="${t('cerca')}" autocomplete="off" onchange="salva();render()">
       ${docIta ? `<label for="docComuneTxt${i}">${t('docComune')}</label><input id="docComuneTxt${i}" list="dl-comuni" value="${esc(o.docComuneTxt)}" placeholder="${t('cerca')}" autocomplete="off">` : ''}
-      <div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}</div>`
+      <div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}${ph(i, 2, t('selfie'), 'wide')}</div>
+      <p class="mini" style="text-align:left;margin:6px 2px 0">${t('selfieT')}</p>`
     : `<label>${t('fotoOpz')}</label><div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}</div>`}
   </div>`;
 }
-function ph(i, j, l) {
+function ph(i, j, l, cls = '') {
   const f = S.ospiti[i].foto[j], gia = !f && S.ospiti[i].haFoto && !S.ospiti[i].foto.some(Boolean);
-  return `<div class="ph" id="ph${i}_${j}">${f ? `<img src="data:image/jpeg;base64,${f.b64}" alt="${esc(l)}">` : gia ? `<span>✓<br>${esc(l)}<br><small style="font-weight:500">${t('fotoOk')}</small></span>` : `<span>📷<br>${esc(l)}<br><small style="font-weight:500">${t('foto')}</small></span>`}
+  return `<div class="ph ${cls}" id="ph${i}_${j}">${f ? `<img src="data:image/jpeg;base64,${f.b64}" alt="${esc(l)}">` : gia ? `<span>✓<br>${esc(l)}<br><small style="font-weight:500">${t('fotoOk')}</small></span>` : `<span>📷<br>${esc(l)}<br><small style="font-weight:500">${t('foto')}</small></span>`}
     <input type="file" accept="image/*" aria-label="${esc(l)}" onchange="foto(${i},${j},this.files[0])"></div>`;
 }
 
@@ -303,7 +305,7 @@ async function invia() {
   });
   const tieni = o => o.haFoto && !o.foto.some(Boolean);   // in modifica: foto già caricate restano valide
   ospiti.forEach((x, i) => { if (tieni(S.ospiti[i])) x.tieniFoto = true; });
-  const fotoMancanti = !tieni(S.ospiti[0]) && (!S.ospiti[0].foto[0] || !S.ospiti[0].foto[1]);
+  const fotoMancanti = !tieni(S.ospiti[0]) && (!S.ospiti[0].foto[0] || !S.ospiti[0].foto[1] || !S.ospiti[0].foto[2]);
   if (!S.pren.partenza && !S.partenza) mark('partenza');
   if (S.n > 1 && !S.gruppo) { S.err = t('errCampi'); }
   if (bad.length) S.err = t('errCampi');
@@ -312,13 +314,13 @@ async function invia() {
   if (S.err) {
     render();
     bad.forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-invalid', 'true'); });
-    if (fotoMancanti && !bad.length) ['ph0_0', 'ph0_1'].forEach(id => { if (!S.ospiti[0].foto[+id.slice(-1)]) document.getElementById(id).classList.add('bad'); });
+    if (fotoMancanti && !bad.length) ['ph0_0', 'ph0_1', 'ph0_2'].forEach(id => { if (!S.ospiti[0].foto[+id.slice(-1)]) document.getElementById(id).classList.add('bad'); });
     (document.querySelector('[aria-invalid=true]') || document.querySelector('.err')).scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   S.sending = true; render();
   try {
-    const body = { b: qs.get('b'), partenza: S.partenza || '', gruppo: S.n > 1 ? S.gruppo : 'singolo', ospiti, lingua: S.lang,
+    const body = { b: qs.get('b'), host: qs.get('host') === '1', partenza: S.partenza || '', gruppo: S.n > 1 ? S.gruppo : 'singolo', ospiti, lingua: S.lang,
       contatto: { email: S.email || '', tel: S.tel || '' } };
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
     const j = await r.json();
