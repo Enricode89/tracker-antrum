@@ -391,10 +391,10 @@ function header(title, eye = false, add = false) {
 function navBar() {
   const it = (tab, label, icon, n) => `<button class="n" ${S.tab === tab ? 'aria-current="page"' : ''} aria-label="${label}${n ? ' (' + n + ' da inviare)' : ''}" onclick="go('${tab}')">${ic(icon, 22)}${label}${n ? `<span class="nbadge">${n}</span>` : ''}</button>`;
   const daInv = ckLista().filter(b => ckStato(b) === 'ricevuto').length;
-  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'grid')}${it('cal', 'Calendario', 'cal')}${it('ck', 'Check-in', 'idcard', daInv)}${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
+  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'cal', daInv)}${it('bil', 'Bilancio', 'trend')}${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
 }
 
-function viewHome() {
+function viewBilancio() {
   const r = range(), c = calc(r);
   const tile = (key, icon, tint, ink, lab, big, sub) =>
     `<button class="tile" aria-expanded="${S.open === key}" onclick="S.open=S.open==='${key}'?null:'${key}';render()">
@@ -402,7 +402,7 @@ function viewHome() {
       <span class="lab">${lab}</span><span class="big">${big}</span><span class="sub">${sub}</span></button>`;
   const occ = Math.round(c.notti / (r.days * 2) * 100);
   const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && (!b.cleaning_paid || !b.linen_paid));
-  let html = header('Home', true) + `<section class="tiles">
+  let html = header('Bilancio', true) + `<section class="tiles">
     ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', meur0(c.netto), 'incassato ' + meur0(c.incasso))}
     ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${meur0(c.loft.netto)}<br>Suite ${meur0(c.suite.netto)}</span>`, 'entrate e uscite')}
     ${tile('notti', 'moon', '#E6F0FA', '#1F5D99', 'Notti prenotate', c.notti, `${c.pren} prenotazioni · ${occ}%`)}
@@ -460,12 +460,11 @@ function viewHome() {
   if (daVersare.length) html += `<div class="alert mt" style="flex-wrap:wrap">${ic('bank')}<span style="flex:1;min-width:0"><b>Tassa di soggiorno maturata da versare</b><br>${tq.nome}${tq.senzaDati.length ? ` · ${tq.senzaDati.length} prenotazion${tq.senzaDati.length > 1 ? 'i' : 'e'} senza ospiti o check-out non incluse` : ''}</span>
     <div style="display:flex;gap:8px;width:100%">${daVersare.map(k => `<button class="chip" style="flex:1;height:44px;font-weight:700" onclick="versaTassa(${restoP(k)},'${k}')">${PROP[k]} ${meur(restoP(k))}</button>`).join('')}</div></div>`;
 
-  // prossimi arrivi
-  const next = S.data.bookings.filter(b => b.status === 'confermata' && b.checkin >= todayIso()).slice(0, 4);
-  html += `<section class="mt2 stack" style="gap:10px"><h2 style="font-size:18px">Prossimi arrivi</h2>
-    <div class="list">${next.length ? next.map(bookingRow).join('') : '<div class="empty">Nessun arrivo in programma</div>'}</div></section>`;
   return html;
 }
+
+// Home: calendario + check-in degli ospiti
+function viewHome() { return viewCal('Home') + ckContenuto(); }
 
 function annualBars() {
   const rows = [];
@@ -670,7 +669,7 @@ function viewMov() {
 }
 
 // ---------------- Calendario ----------------
-function viewCal() {
+function viewCal(titolo = 'Calendario') {
   const y = S.y, m = S.m, first = isoOf(y, m, 1), dim = daysIn(y, m), lead = (dowOf(first) + 6) % 7;
   const props = S.calProp === 'entrambe' ? ['loft', 'suite'] : [S.calProp];
   const conf = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout);
@@ -702,7 +701,7 @@ function viewCal() {
     if (dentro) det += detRow(dentro, PROP[p] + (dentro.checkin === day ? ' · check-in' : ' · occupato'));
     if (!dentro && !esce) det += `<div class="item"><span class="dot" style="background:#E3E5E0"></span><div style="flex:1"><div class="s" style="font-weight:700;text-transform:none">${PROP[p]}</div><div class="t">Libero</div></div></div>`;
   });
-  return `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Calendario</h1></div>
+  return `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${titolo}</h1></div>
     <div class="row" style="gap:4px"><button class="iconbtn" style="border:0;background:none" aria-label="Mese precedente" onclick="shiftMonth(-1)">${ic('left', 18)}</button>
     <b style="font-size:15px;min-width:110px;text-align:center">${MESI[m]} ${y}</b>
     <button class="iconbtn" style="border:0;background:none" aria-label="Mese successivo" onclick="shiftMonth(1)">${ic('right', 18)}</button></div></div>
@@ -876,18 +875,37 @@ function simRender() {
 function openBooking(id) {
   const b = S.data.bookings.find(x => x.id === id);
   const from = isManual(b) ? 'Inserita a mano' : (b.email_id ? 'Letta dalla mail ' : 'Dal calendario ') + CANALE[b.source];
-  sheet(sheetHead(esc(b.guest_name || 'Prenotazione')) + `
-    <p class="small muted" style="margin:-8px 0 16px">${from} · codice ${esc(b.code)}${b.status === 'cancellata' ? ' · <b style="color:var(--red-d)">CANCELLATA</b>' : ''}</p>
+  const [tb, tf] = CH_TINT[isManual(b) ? 'diretta' : b.source];
+  const n = b.checkout ? diffDays(b.checkin, b.checkout) : null;
+  const giorno = iso => { const d = parse(iso); return `<span class="small muted" style="font-weight:700">${GG_L[d.getUTCDay()]}</span><b style="font-size:20px">${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</b>`; };
+  const tel = String(b.guest_phone || '').trim();
+  sheet(sheetHead('Soggiorno') + `
     <div class="stack">
+    <div class="card stack" style="gap:14px">
+      <div class="between" style="align-items:flex-start"><div style="min-width:0"><div class="small muted" style="font-weight:700;letter-spacing:.04em">ANTRUM ${(PROP[b.property] || '').toUpperCase()}</div>
+        <div style="font-size:22px;font-weight:800;line-height:1.2">${esc(b.guest_name || 'Ospite')}</div></div>
+        <span class="badge" style="background:${tb};color:${tf};font-size:11px;padding:5px 9px;flex-shrink:0">${isManual(b) ? 'Diretta' : CANALE[b.source]}</span></div>
+      ${b.status === 'cancellata' ? '<div class="alert" style="background:var(--red-t);color:var(--red-d)"><b>Prenotazione cancellata</b></div>' : ''}
+      <div class="grid2" style="gap:8px"><div class="stack" style="gap:2px;background:var(--ground);border-radius:14px;padding:10px 12px"><span class="small muted">Arrivo</span>${giorno(b.checkin)}</div>
+        <div class="stack" style="gap:2px;background:var(--ground);border-radius:14px;padding:10px 12px"><span class="small muted">Partenza</span>${b.checkout ? giorno(b.checkout) : '<b style="font-size:15px">da completare</b>'}</div></div>
+      <div class="small muted">${n ? n + (n === 1 ? ' notte' : ' notti') : ''}${b.guests ? ' · ' + b.guests + ' ospiti' : ''} · ${from} · ${esc(b.code)}</div>
+      <div class="between" style="border-top:1px solid var(--line2);padding-top:12px"><span style="font-weight:700">Incassato</span><b style="font-size:18px">${b.payout != null ? eur(b.payout) : '<span style="color:var(--amber-d)">da inserire</span>'}</b></div>
+      ${b.guest_total != null ? `<div class="small muted" style="margin-top:-8px">L'ospite ha pagato ${eur(b.guest_total)} · tassa di soggiorno ${eur(b.tourist_tax)}</div>` : ''}
+      ${tel ? `<div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a>
+        <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b, '')}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
+      ${b.note ? `<div class="small" style="background:var(--ground);border-radius:12px;padding:10px 12px;white-space:pre-line">${esc(b.note)}</div>` : ''}
+    </div>
+    ${b.status === 'confermata' ? ckBlock(b) : ''}
+    <details class="card" ${b.payout == null || !b.checkout ? 'open' : ''}><summary style="font-weight:700;cursor:pointer;min-height:24px">Modifica prenotazione</summary>
+    <div class="stack" style="margin-top:14px">
       <label class="field">Importo incassato<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.payout != null ? String(b.payout).replace('.', ',') : ''}" placeholder="0,00"></div></label>
       <div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${b.checkin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${b.checkout || ''}"></label></div>
       <div class="grid2"><label class="field">Struttura${propSel(b.property)}</label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${b.guests ?? ''}"></label></div>
       <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(b.guest_name || '')}"></label><label class="field">Telefono<input id="f_tel" type="tel" inputmode="tel" value="${esc(b.guest_phone || '')}" placeholder="+39 …"></label></div>
       <label class="field">Note<textarea id="f_note">${esc(b.note || '')}</textarea></label>
-      ${b.status === 'confermata' ? ckBlock(b) : ''}
-      ${b.guest_total != null ? `<p class="small muted" style="margin:0">L'ospite ha pagato ${eur(b.guest_total)} · tassa di soggiorno ${eur(b.tourist_tax)}</p>` : ''}
       <button class="btn" onclick="saveBooking('${b.id}')">Salva</button>
       ${b.manual && !b.email_id ? `<button class="btn ghost" onclick="delBooking('${b.id}')">Elimina prenotazione</button>` : ''}
+    </div></details>
     </div>`);
   if (b.status === 'confermata' && b.checkin_url && ckStato(b) !== 'attesa') caricaCkDati(b);
 }
@@ -963,7 +981,7 @@ function ckLista() {
   const oggi = todayIso(), da30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
   return S.data.bookings.filter(b => b.status === 'confermata' && b.checkin && ((b.checkout || b.checkin) >= oggi || (b.checkin_sent_at && b.checkin >= da30)));
 }
-function viewCk() {
+function ckContenuto() {
   const all = ckLista(), f = S.ckFilter || 'dafare';
   const inv = all.filter(b => ckStato(b) === 'ricevuto').sort((a, b) => a.checkin.localeCompare(b.checkin));
   const att = all.filter(b => ckStato(b) === 'attesa').sort((a, b) => a.checkin.localeCompare(b.checkin));
@@ -983,18 +1001,19 @@ function viewCk() {
       ${st === 'inviato' ? `<div class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</div>` : ''}</div>`;
   };
   const sez = (t, l, vuoto) => `<h2 style="font-size:15px;margin:18px 4px 8px">${t}</h2><div class="stack" style="gap:8px">${l.length ? l.map(card).join('') : `<div class="empty">${vuoto}</div>`}</div>`;
-  let html = `<header class="top"><div class="brand">Antrum Loft &amp; Suite</div><h1>Check-in</h1><p class="small muted" style="margin:4px 0 0">Schedine alloggiati per la Questura</p></header>
+  let html = `<section class="mt2"><div class="between" style="margin:0 4px 10px"><h2 style="font-size:20px">Check-in ospiti</h2><span class="small muted">Questura</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${box('dafare', inv.length + att.length, 'Da fare', 'var(--amber-t)', 'var(--amber-d)')}${box('inviati', ok.length, 'Inviati', 'var(--green-t)', 'var(--green-d)')}${box('tutti', all.length, 'Tutti', '#fff', 'var(--ink)')}</div>`;
   if (f === 'dafare') html += sez('Da inviare alla Questura', inv, 'Niente da inviare') + sez('In attesa dei dati dell\'ospite', att, 'Tutti gli ospiti hanno compilato');
   else if (f === 'inviati') html += sez('Inviati in Questura', ok, 'Nessun invio negli ultimi 30 giorni');
   else html += sez('Tutte le prenotazioni', [...all].sort((a, b) => a.checkin.localeCompare(b.checkin)), 'Nessuna prenotazione in arrivo');
-  return html;
+  return html + '</section>';
 }
 function waLink(b, testo) {
   let n = String(b.guest_phone || '').replace(/[^\d+]/g, '');
   if (n.startsWith('00')) n = '+' + n.slice(2);
   if (n && !n.startsWith('+')) n = '+39' + n;          // numero italiano senza prefisso
-  return 'https://wa.me/' + n.replace('+', '') + '?text=' + encodeURIComponent(testo || msgCheckin(b));
+  const t = testo === '' ? '' : testo || msgCheckin(b);           // '' = apre solo la chat
+  return 'https://wa.me/' + n.replace('+', '') + (t ? '?text=' + encodeURIComponent(t) : '');
 }
 function msgCheckin(b) {
   const d = iso => { const [y, m, g] = iso.split('-'); return `${g}/${m}/${y}`; };
@@ -1147,7 +1166,7 @@ async function endFixed(id) {
 // =====================================================================
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 function render() {
-  const v = { home: viewHome, cal: viewCal, ck: viewCk, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
+  const v = { home: viewHome, bil: viewBilancio, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
