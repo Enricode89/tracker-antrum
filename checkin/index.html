@@ -62,6 +62,10 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--red);backg
 .center{text-align:center;color:var(--muted);padding:60px 10px}
 .hidden{display:none}
 .mini{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+.scan{background:#F2F7F4;border:1.5px solid #CFE6D8;border-radius:16px;padding:14px;margin:4px 0 14px}
+.scan button{width:100%;height:52px;border:0;border-radius:14px;background:var(--green);color:#fff;font:inherit;font-size:16px;font-weight:800}
+.scan p{font-size:13px;color:var(--muted);margin:8px 2px 0}
+.scan .st{font-weight:700;margin-top:10px;font-size:14px}.scan .st.ok{color:var(--green)}.scan .st.ko{color:#8E2A20}
 </style>
 </head>
 <body>
@@ -85,7 +89,7 @@ const T = {
     docPaese: 'Paese di rilascio', docComune: 'Comune di rilascio', fronte: 'Foto fronte', retro: 'Foto retro', fotoOpz: 'Foto documento e selfie (facoltative)',
     cerca: 'Scrivi e scegli dall\'elenco', contatto: 'Contatto', email: 'Email', tel: 'Telefono', facolt: 'facoltativo',
     privacy: 'Acconsento al trattamento dei dati per la comunicazione obbligatoria alla Questura (art. 109 TULPS). I dati non vengono usati per altri scopi e le foto dei documenti vengono cancellate entro 30 giorni dalla partenza.',
-    invia: 'Invia i dati', invio: 'Invio in corso…', grazie: 'Grazie!', grazieT: 'Abbiamo ricevuto i vostri dati. Ci vediamo presto!',
+    invia: 'Invia i dati', invio: 'Invio in corso…', grazie: 'Grazie!', grazieT: 'Abbiamo ricevuto i vostri dati. Ci vediamo presto!', scan: 'Fotografa il documento', scanT: 'Carta d\'identità: il retro, con le righe <<<. Passaporto: la pagina con la foto. Compiliamo noi i dati, tu controlli.', scanLeggo: 'Leggo il documento…', scanOk: 'Dati letti dal documento: controlla e completa.', scanKo: 'Non riesco a leggere il codice: riprova con una foto più nitida, senza riflessi, oppure compila a mano.', dataPh: 'gg/mm/aaaa', torna: 'Torna al tracker',
     errCampi: 'Controlla i campi evidenziati in rosso.', errPrivacy: 'Serve il consenso per procedere.', errRete: 'Invio non riuscito, riprova tra poco.',
     errLink: 'Questo link non è valido. Contatta l\'host.', foto: 'Scatta o carica', fotoReq: 'Servono le foto del documento e il selfie con il documento del titolare.', prep: 'Tieni a portata di mano il documento: ti chiederemo foto fronte e retro e un selfie con il documento in mano.', selfie: 'Selfie con documento', selfieT: 'Una foto del tuo viso con il documento in mano, accanto al volto e leggibile.', host: 'Compilato dall\'host', modT: 'Stai modificando i dati inviati il {d}. Correggi o aggiungi persone e invia di nuovo: sostituiranno quelli precedenti.', fotoOk: 'Già caricata', inviaMod: 'Invia le modifiche', grazieMod: 'Modifiche ricevute. Grazie!' },
   en: { title: 'Online check-in', sub: 'Italian law (art. 109 TULPS) requires us to register every guest with the police. It takes 3 minutes.',
@@ -95,7 +99,7 @@ const T = {
     docPaese: 'Issuing country', docComune: 'Issuing town (Italy)', fronte: 'Front photo', retro: 'Back photo', fotoOpz: 'Document photos and selfie (optional)',
     cerca: 'Type and pick from the list', contatto: 'Contact', email: 'Email', tel: 'Phone', facolt: 'optional',
     privacy: 'I consent to the processing of these data for the mandatory notification to the Italian police (art. 109 TULPS). Data are not used for anything else and document photos are deleted within 30 days of departure.',
-    invia: 'Send details', invio: 'Sending…', grazie: 'Thank you!', grazieT: 'We have received your details. See you soon!',
+    invia: 'Send details', invio: 'Sending…', grazie: 'Thank you!', grazieT: 'We have received your details. See you soon!', scan: 'Scan your ID', scanT: 'ID card: the back, with the <<< lines. Passport: the photo page. We fill in the details, you check them.', scanLeggo: 'Reading your document…', scanOk: 'Details read from your document: please check and complete.', scanKo: 'Could not read the code: try a sharper photo without glare, or fill in by hand.', dataPh: 'dd/mm/yyyy', torna: 'Back to tracker',
     errCampi: 'Please check the fields highlighted in red.', errPrivacy: 'Consent is required to continue.', errRete: 'Sending failed, please try again shortly.',
     errLink: 'This link is not valid. Please contact your host.', foto: 'Take or upload', fotoReq: 'Photos of the lead guest\'s document and a selfie holding it are required.', prep: 'Have your ID ready: we will ask for photos of the front and back and a selfie holding it.', selfie: 'Selfie with ID', selfieT: 'A photo of your face holding your ID next to it, clearly readable.', host: 'Filled in by the host', modT: 'You are editing the details sent on {d}. Fix or add guests and send again: they will replace the previous ones.', fotoOk: 'Already uploaded', inviaMod: 'Send changes', grazieMod: 'Changes received. Thank you!' },
   es: { title: 'Check-in online', sub: 'La ley italiana (art. 109 TULPS) nos obliga a registrar a todos los huéspedes ante la policía. Son 3 minutos.',
@@ -105,7 +109,7 @@ const T = {
     docPaese: 'País de expedición', docComune: 'Municipio de expedición (Italia)', fronte: 'Foto anverso', retro: 'Foto reverso', fotoOpz: 'Fotos del documento y selfie (opcional)',
     cerca: 'Escribe y elige de la lista', contatto: 'Contacto', email: 'Email', tel: 'Teléfono', facolt: 'opcional',
     privacy: 'Doy mi consentimiento al tratamiento de los datos para la comunicación obligatoria a la policía italiana (art. 109 TULPS). Las fotos de los documentos se borran en 30 días tras la salida.',
-    invia: 'Enviar datos', invio: 'Enviando…', grazie: '¡Gracias!', grazieT: 'Hemos recibido vuestros datos. ¡Hasta pronto!',
+    invia: 'Enviar datos', invio: 'Enviando…', grazie: '¡Gracias!', grazieT: 'Hemos recibido vuestros datos. ¡Hasta pronto!', scan: 'Fotografía tu documento', scanT: 'DNI: el reverso, con las líneas <<<. Pasaporte: la página con la foto. Rellenamos los datos, tú los compruebas.', scanLeggo: 'Leyendo el documento…', scanOk: 'Datos leídos del documento: compruébalos y completa.', scanKo: 'No se pudo leer el código: prueba con una foto más nítida y sin reflejos, o rellena a mano.', dataPh: 'dd/mm/aaaa', torna: 'Volver',
     errCampi: 'Revisa los campos marcados en rojo.', errPrivacy: 'Se necesita el consentimiento.', errRete: 'Error de envío, inténtalo de nuevo.',
     errLink: 'Este enlace no es válido. Contacta con el anfitrión.', foto: 'Hacer o subir', fotoReq: 'Se necesitan las fotos del documento y un selfie del titular con el documento.', prep: 'Ten a mano tu documento: te pediremos fotos del anverso y reverso y un selfie con el documento en la mano.', selfie: 'Selfie con documento', selfieT: 'Una foto de tu cara con el documento en la mano, junto al rostro y legible.', host: 'Rellenado por el anfitrión', modT: 'Estás modificando los datos enviados el {d}. Corrige o añade personas y envía de nuevo: sustituirán a los anteriores.', fotoOk: 'Ya subida', inviaMod: 'Enviar cambios', grazieMod: 'Cambios recibidos. ¡Gracias!' },
   fr: { title: 'Check-in en ligne', sub: 'La loi italienne (art. 109 TULPS) nous oblige à déclarer chaque voyageur à la police. Cela prend 3 minutes.',
@@ -115,7 +119,7 @@ const T = {
     docPaese: 'Pays de délivrance', docComune: 'Commune de délivrance (Italie)', fronte: 'Photo recto', retro: 'Photo verso', fotoOpz: 'Photos du document et selfie (facultatives)',
     cerca: 'Tapez et choisissez dans la liste', contatto: 'Contact', email: 'Email', tel: 'Téléphone', facolt: 'facultatif',
     privacy: 'J\'accepte le traitement de ces données pour la déclaration obligatoire à la police italienne (art. 109 TULPS). Les photos des documents sont supprimées dans les 30 jours suivant le départ.',
-    invia: 'Envoyer', invio: 'Envoi…', grazie: 'Merci !', grazieT: 'Nous avons bien reçu vos données. À bientôt !',
+    invia: 'Envoyer', invio: 'Envoi…', grazie: 'Merci !', grazieT: 'Nous avons bien reçu vos données. À bientôt !', scan: 'Photographiez votre pièce', scanT: 'Carte d\'identité : le verso, avec les lignes <<<. Passeport : la page avec la photo. Nous remplissons, vous vérifiez.', scanLeggo: 'Lecture du document…', scanOk: 'Données lues sur le document : vérifiez et complétez.', scanKo: 'Lecture impossible : essayez une photo plus nette, sans reflets, ou remplissez à la main.', dataPh: 'jj/mm/aaaa', torna: 'Retour',
     errCampi: 'Vérifiez les champs en rouge.', errPrivacy: 'Le consentement est nécessaire.', errRete: 'Échec de l\'envoi, réessayez.',
     errLink: 'Ce lien n\'est pas valide. Contactez votre hôte.', foto: 'Prendre ou charger', fotoReq: 'Les photos du document et un selfie du titulaire avec son document sont requis.', prep: 'Gardez votre pièce d\'identité à portée de main : nous vous demanderons une photo recto et verso et un selfie avec la pièce en main.', selfie: 'Selfie avec la pièce', selfieT: 'Une photo de votre visage avec la pièce d\'identité à côté, bien lisible.', host: 'Rempli par l\'hôte', modT: 'Vous modifiez les données envoyées le {d}. Corrigez ou ajoutez des personnes puis renvoyez : elles remplaceront les précédentes.', fotoOk: 'Déjà chargée', inviaMod: 'Envoyer les modifications', grazieMod: 'Modifications reçues. Merci !' },
   de: { title: 'Online-Check-in', sub: 'Das italienische Gesetz (Art. 109 TULPS) verlangt, alle Gäste bei der Polizei zu melden. Es dauert 3 Minuten.',
@@ -125,7 +129,7 @@ const T = {
     docPaese: 'Ausstellungsland', docComune: 'Ausstellungsort (Italien)', fronte: 'Foto Vorderseite', retro: 'Foto Rückseite', fotoOpz: 'Ausweisfotos und Selfie (optional)',
     cerca: 'Tippen und aus der Liste wählen', contatto: 'Kontakt', email: 'E-Mail', tel: 'Telefon', facolt: 'optional',
     privacy: 'Ich willige in die Verarbeitung dieser Daten für die Pflichtmeldung an die italienische Polizei ein (Art. 109 TULPS). Ausweisfotos werden innerhalb von 30 Tagen nach Abreise gelöscht.',
-    invia: 'Daten senden', invio: 'Wird gesendet…', grazie: 'Danke!', grazieT: 'Wir haben Ihre Daten erhalten. Bis bald!',
+    invia: 'Daten senden', invio: 'Wird gesendet…', grazie: 'Danke!', grazieT: 'Wir haben Ihre Daten erhalten. Bis bald!', scan: 'Ausweis fotografieren', scanT: 'Personalausweis: die Rückseite mit den <<<-Zeilen. Reisepass: die Seite mit dem Foto. Wir füllen aus, Sie prüfen.', scanLeggo: 'Dokument wird gelesen…', scanOk: 'Daten aus dem Dokument gelesen: bitte prüfen und ergänzen.', scanKo: 'Code nicht lesbar: schärferes Foto ohne Spiegelung versuchen oder von Hand ausfüllen.', dataPh: 'tt/mm/jjjj', torna: 'Zurück',
     errCampi: 'Bitte die rot markierten Felder prüfen.', errPrivacy: 'Die Einwilligung ist erforderlich.', errRete: 'Senden fehlgeschlagen, bitte erneut versuchen.',
     errLink: 'Dieser Link ist ungültig. Bitte kontaktieren Sie den Gastgeber.', foto: 'Aufnehmen oder hochladen', fotoReq: 'Fotos des Ausweises und ein Selfie der buchenden Person mit Ausweis sind erforderlich.', prep: 'Halten Sie Ihren Ausweis bereit: Wir bitten um Fotos der Vorder- und Rückseite und ein Selfie mit dem Ausweis in der Hand.', selfie: 'Selfie mit Ausweis', selfieT: 'Ein Foto Ihres Gesichts mit dem Ausweis daneben, gut lesbar.', host: 'Vom Gastgeber ausgefüllt', modT: 'Sie bearbeiten die am {d} gesendeten Daten. Korrigieren oder ergänzen Sie Personen und senden Sie erneut: sie ersetzen die vorherigen.', fotoOk: 'Bereits hochgeladen', inviaMod: 'Änderungen senden', grazieMod: 'Änderungen erhalten. Danke!' },
 };
@@ -238,7 +242,8 @@ function riempiListe() {
 
 // ===================== Interfaccia =====================
 function render() {
-  if (S.done) { $('#app').innerHTML = topbar() + `<div class="done"><div class="ok">✓</div><h1>${t('grazie')}</h1><p>${S.mod ? t('grazieMod') : t('grazieT')}</p></div>`; return; }
+  if (S.done) { $('#app').innerHTML = topbar() + `<div class="done"><div class="ok">✓</div><h1>${t('grazie')}</h1><p>${S.mod ? t('grazieMod') : t('grazieT')}</p>
+    ${qs.get('host') === '1' ? `<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:22px;background:#121A21" href="https://enricode89.github.io/tracker-antrum/?apri=${encodeURIComponent(qs.get('b') || '')}">← ${t('torna')}</a>` : ''}</div>`; return; }
   const p = S.pren;
   const notti = p.partenza ? Math.round((Date.parse(p.partenza) - Date.parse(p.arrivo)) / 864e5) : null;
   $('#app').innerHTML = topbar() + `
@@ -272,9 +277,12 @@ function cardOspite(o, i) {
   const ita = (S.tab.stati.get((o.statoTxt || '').toUpperCase()) === ITALIA);
   const docIta = (S.tab.stati.get((o.docPaeseTxt || '').toUpperCase()) === ITALIA);
   return `<div class="card" data-i="${i}"><h3><span class="n">${i + 1}</span>${capo ? t('tu') : t('ospite') + ' ' + (i + 1)}</h3>
+    <div class="scan"><button type="button" onclick="document.getElementById('scan${i}').click()" ${o.scan === 'leggo' ? 'disabled' : ''}>📷 ${o.scan === 'leggo' ? t('scanLeggo') : t('scan')}</button>
+      <input type="file" id="scan${i}" accept="image/*" hidden onchange="scansiona(${i},this.files[0])"><p>${t('scanT')}</p>
+      ${o.scan === 'ok' ? `<div class="st ok">✓ ${t('scanOk')}</div>` : o.scan === 'ko' ? `<div class="st ko">${t('scanKo')}</div>` : ''}</div>
     <div class="row2"><div>${f('nome', t('nome'), 'text', 'autocomplete="given-name"')}</div><div>${f('cognome', t('cognome'), 'text', 'autocomplete="family-name"')}</div></div>
     <div class="row2"><div><label for="sesso${i}">${t('sesso')}</label><select id="sesso${i}"><option value=""></option><option value="1" ${o.sesso === '1' ? 'selected' : ''}>${t('m')}</option><option value="2" ${o.sesso === '2' ? 'selected' : ''}>${t('f')}</option></select></div>
-      <div>${f('nascita', t('nascita'), 'date', `max="${new Date().toISOString().slice(0, 10)}"`)}</div></div>
+      <div><label for="nascita${i}">${t('nascita')}</label><input id="nascita${i}" type="text" inputmode="numeric" maxlength="10" placeholder="${t('dataPh')}" value="${esc(o.nascitaTxt ?? dataIt(o.nascita))}" oninput="mascheraData(this)" autocomplete="bday"></div></div>
     <label for="statoTxt${i}">${t('statoN')}</label><input id="statoTxt${i}" list="dl-stati" value="${esc(o.statoTxt)}" placeholder="${t('cerca')}" autocomplete="off" onchange="salva();render()">
     ${ita ? `<label for="comuneTxt${i}">${t('comuneN')}</label><input id="comuneTxt${i}" list="dl-comuni" value="${esc(o.comuneTxt)}" placeholder="${t('cerca')}" autocomplete="off">` : ''}
     <label for="cittTxt${i}">${t('cittad')}</label><input id="cittTxt${i}" list="dl-stati" value="${esc(o.cittTxt)}" placeholder="${t('cerca')}" autocomplete="off">
@@ -298,7 +306,8 @@ function ph(i, j, l, cls = '') {
 // legge i campi nello stato (prima di ogni render)
 function salva() {
   S.ospiti.forEach((o, i) => {
-    ['nome', 'cognome', 'sesso', 'nascita', 'statoTxt', 'comuneTxt', 'cittTxt', 'docTipo', 'docNumero', 'docPaeseTxt', 'docComuneTxt'].forEach(k => { const el = document.getElementById(k + i); if (el) o[k] = el.value.trim(); });
+    const dn = document.getElementById('nascita' + i); if (dn) { o.nascitaTxt = dn.value.trim(); o.nascita = isoDaData(o.nascitaTxt); }
+    ['nome', 'cognome', 'sesso', 'statoTxt', 'comuneTxt', 'cittTxt', 'docTipo', 'docNumero', 'docPaeseTxt', 'docComuneTxt'].forEach(k => { const el = document.getElementById(k + i); if (el) o[k] = el.value.trim(); });
   });
   const pa = $('#partenza'); if (pa) S.partenza = pa.value;
   ['email', 'tel'].forEach(k => { const el = $('#' + k); if (el) S[k] = el.value.trim(); });
@@ -310,6 +319,151 @@ async function foto(i, j, file) {
   salva();
   try { S.ospiti[i].foto[j] = await comprimi(file); } catch (e) { S.err = t('errRete'); }
   render();
+}
+// ===================== Lettura documento (MRZ) =====================
+// Le righe con "<<<" in fondo a carte d'identità e passaporti: lette sul telefono con Tesseract (gratis, nessun dato inviato a terzi)
+const ISO3 = { ITA: ['ITALIA'], USA: ["STATI UNITI D'AMERICA", 'STATI UNITI'], GBR: ['REGNO UNITO'], GBD: ['REGNO UNITO'], GBN: ['REGNO UNITO'], D: ['GERMANIA'], DEU: ['GERMANIA'],
+  FRA: ['FRANCIA'], ESP: ['SPAGNA'], NLD: ['PAESI BASSI'], BEL: ['BELGIO'], CHE: ['SVIZZERA'], AUT: ['AUSTRIA'], PRT: ['PORTOGALLO'], IRL: ['IRLANDA'], POL: ['POLONIA'],
+  ROU: ['ROMANIA'], GRC: ['GRECIA'], SWE: ['SVEZIA'], NOR: ['NORVEGIA'], DNK: ['DANIMARCA'], FIN: ['FINLANDIA'], CZE: ['CECA, REPUBBLICA', 'REPUBBLICA CECA', 'CECHIA'],
+  HUN: ['UNGHERIA'], CAN: ['CANADA'], AUS: ['AUSTRALIA'], NZL: ['NUOVA ZELANDA'], BRA: ['BRASILE'], ARG: ['ARGENTINA'], MEX: ['MESSICO'], JPN: ['GIAPPONE'], CHN: ['CINA'],
+  KOR: ['COREA DEL SUD', 'COREA, REPUBBLICA', 'COREA DEL SUD (REPUBBLICA DI COREA)'], IND: ['INDIA'], ISR: ['ISRAELE'], TUR: ['TURCHIA'], RUS: ['RUSSIA', 'FEDERAZIONE RUSSA'],
+  UKR: ['UCRAINA'], ZAF: ['SUD AFRICA', 'SUDAFRICA'], HRV: ['CROAZIA'], SVN: ['SLOVENIA'], SVK: ['SLOVACCHIA'], BGR: ['BULGARIA'], ALB: ['ALBANIA'], SRB: ['SERBIA'],
+  LUX: ['LUSSEMBURGO'], MLT: ['MALTA'], CYP: ['CIPRO'], ISL: ['ISLANDA'], EST: ['ESTONIA'], LVA: ['LETTONIA'], LTU: ['LITUANIA'], COL: ['COLOMBIA'], CHL: ['CILE'],
+  PER: ["PERU'", 'PERÙ', 'PERU'], MAR: ['MAROCCO'], EGY: ['EGITTO'], SGP: ['SINGAPORE'], PHL: ['FILIPPINE'], TWN: ['TAIWAN'], THA: ['THAILANDIA'], VNM: ['VIETNAM'],
+  IDN: ['INDONESIA'], MYS: ['MALAYSIA'], ARE: ['EMIRATI ARABI UNITI'], SAU: ['ARABIA SAUDITA'], URY: ['URUGUAY'], VEN: ['VENEZUELA'], ECU: ['ECUADOR'], CRI: ['COSTA RICA'],
+  DOM: ['DOMINICANA, REPUBBLICA', 'REPUBBLICA DOMINICANA'], CUB: ['CUBA'], TUN: ['TUNISIA'], DZA: ['ALGERIA'], NGA: ['NIGERIA'], KEN: ['KENYA'], LBN: ['LIBANO'], JOR: ['GIORDANIA'],
+  SMR: ['SAN MARINO'], VAT: ['CITTA\' DEL VATICANO', 'SANTA SEDE'], MCO: ['MONACO', 'PRINCIPATO DI MONACO'], AND: ['ANDORRA'], LIE: ['LIECHTENSTEIN'], MNE: ['MONTENEGRO'],
+  BIH: ['BOSNIA-ERZEGOVINA', 'BOSNIA ED ERZEGOVINA'], MKD: ['MACEDONIA DEL NORD', 'MACEDONIA'], MDA: ['MOLDOVA', 'MOLDAVIA'], BLR: ['BIELORUSSIA'], GEO: ['GEORGIA'], ARM: ['ARMENIA'] };
+function paeseDa(code) {
+  const c = String(code || '').replace(/</g, '');
+  for (const n of ISO3[c] || []) if (S.tab.stati.has(n)) return n;
+  return '';
+}
+const MRZ_W = [7, 3, 1];
+function cifraControllo(s) {
+  let t = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i], v = ch === '<' ? 0 : /\d/.test(ch) ? +ch : ch.charCodeAt(0) - 55;
+    t += v * MRZ_W[i % 3];
+  }
+  return String(t % 10);
+}
+// cifre lette come lettere (O→0, I→1…) nei campi numerici
+const soloCifre = s => s.replace(/[OQD]/g, '0').replace(/[IL]/g, '1').replace(/Z/g, '2').replace(/S/g, '5').replace(/B/g, '8').replace(/G/g, '6');
+function dataMrz(s, futura) {
+  s = soloCifre(s);
+  if (!/^\d{6}$/.test(s)) return '';
+  let y = +s.slice(0, 2); const m = s.slice(2, 4), d = s.slice(4, 6), oggi = new Date().getFullYear() % 100;
+  y += futura ? 2000 : (y > oggi ? 1900 : 2000);
+  if (+m < 1 || +m > 12 || +d < 1 || +d > 31) return '';
+  return `${y}-${m}-${d}`;
+}
+const nomiMrz = s => {
+  const [cog, nom = ''] = s.replace(/<+$/, '').split('<<');
+  return { cognome: cog.replace(/</g, ' ').trim(), nome: nom.replace(/</g, ' ').trim() };
+};
+function leggiMrz(testo) {
+  const righe = String(testo || '').toUpperCase().split(/\n/)
+    .map(r => r.replace(/[«‹(\[{]/g, '<').replace(/\s+/g, '').replace(/[^A-Z0-9<]/g, ''))
+    .map(r => r.replace(/<[<KL]*$/, x => '<'.repeat(x.length)))   // riempitivo finale letto come K/L
+    .filter(r => r.length >= 28 && (r.match(/</g) || []).length >= 2);
+  const pad = (r, n) => (r + '<'.repeat(n)).slice(0, n);
+  // TD3 (passaporto, 2×44) o TD2 (2×36)
+  for (let k = 0; k < righe.length - 1; k++) {
+    const a = righe[k], b = righe[k + 1];
+    if (/^P/.test(a) && a.length >= 40 && b.length >= 40) {
+      const l1 = pad(a, 44), l2 = pad(b, 44);
+      const num = l2.slice(0, 9).replace(/<+$/, '');
+      return { tipo: 'P', paese: l1.slice(2, 5), ...nomiMrz(l1.slice(5)), numero: num, cittad: l2.slice(10, 13),
+        nascita: dataMrz(l2.slice(13, 19)), sesso: l2[20], ok: cifraControllo(soloCifre(l2.slice(13, 19))) === soloCifre(l2[19]) };
+    }
+  }
+  // TD1 (carta d'identità, 3×30)
+  for (let k = 0; k < righe.length - 2; k++) {
+    const a = righe[k], b = righe[k + 1], c = righe[k + 2];
+    if (/^[ICA]/.test(a) && b.length >= 28) {
+      const l1 = pad(a, 30), l2 = pad(b, 30), l3 = pad(c, 30);
+      let num = l1.slice(5, 14).replace(/<+$/, '');
+      if (l1[14] === '<') num += l1.slice(15, 30).split('<')[0].slice(0, -1);   // numeri più lunghi di 9 caratteri
+      return { tipo: 'I', paese: l1.slice(2, 5), ...nomiMrz(l3), numero: num, cittad: l2.slice(15, 18),
+        nascita: dataMrz(l2.slice(0, 6)), sesso: l2[7], ok: cifraControllo(soloCifre(l2.slice(0, 6))) === soloCifre(l2[6]) };
+    }
+  }
+  return null;
+}
+
+// data di nascita scritta a mano: gli slash si mettono da soli (gg/mm/aaaa)
+function mascheraData(el) {
+  const d = el.value.replace(/\D/g, '').slice(0, 8);
+  el.value = d.length > 4 ? d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4) : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
+}
+const dataIt = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? iso.split('-').reverse().join('/') : '';
+function isoDaData(txt) {
+  const m = String(txt || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return '';
+  const iso = `${m[3]}-${m[2]}-${m[1]}`, d = new Date(iso + 'T12:00:00Z');
+  if (isNaN(d) || d.toISOString().slice(0, 10) !== iso || +m[3] < 1900 || iso > new Date().toISOString().slice(0, 10)) return '';
+  return iso;
+}
+// foto del documento → OCR sul telefono → modulo precompilato (l'ospite controlla)
+let ocrPronto = null;
+function caricaOcr() {
+  if (!ocrPronto) ocrPronto = new Promise((ok, ko) => {
+    if (window.Tesseract) return ok(window.Tesseract);
+    const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = () => ok(window.Tesseract); sc.onerror = () => { ocrPronto = null; ko(new Error('ocr')); }; document.head.appendChild(sc);
+  });
+  return ocrPronto;
+}
+function ritaglioBasso(file, quota) {   // parte bassa della foto (dove stanno le righe <<<), in scala di grigi e ingrandita
+  return new Promise((ok, ko) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const w = Math.min(2000, img.width), k = w / img.width, h = Math.round(img.height * k * quota);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.filter = 'grayscale(1) contrast(1.4)';
+      g.drawImage(img, 0, img.height * (1 - quota), img.width, img.height * quota, 0, 0, w, h);
+      URL.revokeObjectURL(url); ok(c);
+    };
+    img.onerror = ko; img.src = url;
+  });
+}
+async function scansiona(i, file) {
+  if (!file) return;
+  salva();
+  const o = S.ospiti[i];
+  o.scan = 'leggo'; render();
+  try {
+    const img = await comprimi(file);
+    const T = await caricaOcr();
+    const w = await T.createWorker('eng');
+    await w.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<' });
+    let m = null;
+    for (const q of [0.45, 1]) {   // prima la parte bassa, poi tutta la foto
+      const { data } = await w.recognize(await ritaglioBasso(file, q));
+      m = leggiMrz(data.text);
+      if (m && m.cognome && m.nascita) break;
+    }
+    await w.terminate();
+    if (!m || !m.cognome) throw new Error('mrz');
+    o.foto[m.tipo === 'P' ? 0 : 1] = img;   // la foto scattata vale già come fronte (passaporto) o retro (carta)
+    const tc = x => String(x || '').toLowerCase().replace(/(^|[\s'-])\S/g, y => y.toUpperCase());
+    o.cognome = tc(m.cognome); o.nome = tc(m.nome) || o.nome;
+    if (m.sesso === 'M' || m.sesso === 'F') o.sesso = m.sesso === 'M' ? '1' : '2';
+    if (m.nascita) { o.nascita = m.nascita; o.nascitaTxt = dataIt(m.nascita); }
+    const citt = paeseDa(m.cittad), emit = paeseDa(m.paese) || citt;
+    if (citt) { o.cittTxt = citt; if (!o.statoTxt) o.statoTxt = citt; }
+    if (i === 0) {
+      const tipi = new Set(S.tab.documenti.map(([c]) => c));
+      const tipo = m.tipo === 'P' ? 'PASOR' : (m.paese === 'ITA' ? 'IDELE' : 'IDENT');
+      if (tipi.has(tipo)) o.docTipo = tipo;
+      if (m.numero) o.docNumero = m.numero;
+      if (emit) o.docPaeseTxt = emit;
+    }
+    o.scan = 'ok';
+  } catch (e) { o.scan = 'ko'; }
+  render();
+  const c = document.querySelector(`[data-i="${i}"]`); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function comprimi(file) {
   return new Promise((ok, ko) => {
