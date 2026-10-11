@@ -294,6 +294,13 @@ const S = {
   per: { from: now.getFullYear() * 12 + Math.max(now.getMonth() - 1, 0), to: now.getFullYear() * 12 + now.getMonth(), prop: 'entrambe', mov: false },
 };
 
+// notifica "nuovo check-in" → apre direttamente la scheda del soggiorno (?apri=<id prenotazione>)
+function apriDaLink() {
+  const id = new URLSearchParams(location.search).get('apri');
+  if (!id) return;
+  history.replaceState(null, '', location.pathname);
+  if (S.data.bookings.some(b => b.id === id)) openBooking(id);
+}
 async function loadData() {
   const [b, e, f, a] = await Promise.all([
     sb.from('bookings').select('*').order('checkin'),
@@ -1261,7 +1268,7 @@ document.addEventListener('keydown', e => { if ($('.login')) { if (/^\d$/.test(e
 async function logout() { await sb.auth.signOut(); loginView(); }
 async function start() {
   $('#root').innerHTML = '<div class="empty" style="padding-top:40vh">Caricamento…</div>';
-  try { await loadData(); render(); }
+  try { await loadData(); render(); apriDaLink(); }
   catch (e) { if (/JWT|auth/i.test(e.message)) return loginView(); $('#root').innerHTML = `<div class="empty" style="padding-top:35vh">Impossibile caricare i dati: ${esc(e.message)}<br><br><button class="btn" style="width:auto;padding:0 24px" onclick="start()">Riprova</button></div>`; }
 }
 // ---------------- Notifiche push (promemoria pulizie) ----------------
