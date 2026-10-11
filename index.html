@@ -102,6 +102,9 @@ h2{margin:0;font-size:17px;font-weight:700}
 .dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
 .alert{display:flex;gap:12px;align-items:center;background:var(--amber-t);color:var(--amber-d);border-radius:16px;padding:14px 16px;border:0;width:100%;text-align:left;font-size:13px;font-weight:500}
 .alert b{font-weight:700}
+.stim{background:#FFE27A;color:#4D3400;border-radius:8px;padding:2px 8px}
+.badge.val{background:var(--red-t);color:var(--red-d);white-space:nowrap;display:inline-block}
+.alert.val{background:var(--red-t);color:var(--red-d)}
 .empty{padding:28px 10px;text-align:center;color:var(--muted);font-size:14px}
 
 /* pulizie */
@@ -188,6 +191,11 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSe
 
 const PROP = { loft: 'Loft', suite: 'Suite' };
 const CANALE = { airbnb: 'Airbnb', booking: 'Booking', diretta: 'Diretta' };
+// Booking non manda l'importo: stima 95 € a notte finché non lo validi tu
+const STIMA_NOTTE_BOOKING = 95;
+const stima = b => b && b.status === 'confermata' && b.source === 'booking' && b.payout == null && b.checkout ? diffDays(b.checkin, b.checkout) * STIMA_NOTTE_BOOKING : null;
+const importo = b => b.payout ?? stima(b);
+const daValidare = () => S.data.bookings.filter(b => stima(b) != null);
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const MESI_B = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 const GG = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
@@ -322,7 +330,7 @@ function fixedOccurrences(r) {
 }
 
 function calc(r) {
-  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaMat: 0, rit: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0 });
+  const P = () => ({ lordo: 0, comm: 0, incasso: 0, tassa: 0, tassaMat: 0, rit: 0, tassaVers: 0, fisse: 0, pulizie: 0, nPulizie: 0, spese: 0, rett: 0, notti: 0, pren: 0, stim: 0 });
   const t = { ...P(), loft: P(), suite: P(), ch: { airbnb: 0, booking: 0, diretta: 0 }, mancanti: [] };
   const add = (prop, k, v) => { t[k] += v; if (prop === 'entrambe') { t.loft[k] += v / 2; t.suite[k] += v / 2; } else if (t[prop]) t[prop][k] += v; };
   S.data.bookings.forEach(b => {
@@ -330,9 +338,10 @@ function calc(r) {
     if (inR(b.checkin, r)) {
       if (b.status === 'confermata') {
         add(p, 'pren', 1);
-        if (b.payout == null) t.mancanti.push(b);
-        add(p, 'incasso', +b.payout || 0);
-        add(p, 'lordo', +(b.guest_total ?? b.payout) || 0);
+        if (importo(b) == null) t.mancanti.push(b);
+        add(p, 'incasso', +importo(b) || 0);
+        add(p, 'stim', stima(b) || 0);
+        add(p, 'lordo', +(b.guest_total ?? importo(b)) || 0);
         if (b.guest_total != null && b.payout != null) add(p, 'comm', b.guest_total - b.payout);
         add(p, 'tassa', +b.tourist_tax || 0);
         add(p, 'rit', ritenuta(b));
@@ -403,7 +412,7 @@ function viewBilancio() {
   const occ = Math.round(c.notti / (r.days * 2) * 100);
   const daPagare = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout <= todayIso() && (!b.cleaning_paid || !b.linen_paid));
   let html = header('Bilancio', true) + `<section class="tiles">
-    ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', meur0(c.netto), 'incassato ' + meur0(c.incasso))}
+    ${tile('guadagno', 'trend', '#E2F3E8', '#1E7A45', 'Guadagno netto', meur0(c.netto), 'incassato ' + meur0(c.incasso) + (c.stim ? ' · ' + meur0(c.stim) + ' stimati' : ''))}
     ${tile('strutture', 'house', '#EEE9F8', '#5B3FA0', 'Strutture', `<span style="font-size:16px;line-height:1.35;display:block">Loft ${meur0(c.loft.netto)}<br>Suite ${meur0(c.suite.netto)}</span>`, 'entrate e uscite')}
     ${tile('notti', 'moon', '#E6F0FA', '#1F5D99', 'Notti prenotate', c.notti, `${c.pren} prenotazioni · ${occ}%`)}
     <button class="tile" onclick="go('pul')"><div class="ic" style="background:#E3F2F6;color:#1C6E85">${ic('spark')}</div>
@@ -450,8 +459,9 @@ function viewBilancio() {
     </section>`;
   }
 
+  html += avvisoValidare();
   // da completare
-  const todo = S.data.bookings.filter(b => b.status === 'confermata' && (b.payout == null || !b.checkout) && b.checkin >= addDays(todayIso(), -60));
+  const todo = S.data.bookings.filter(b => b.status === 'confermata' && ((b.payout == null && stima(b) == null) || !b.checkout) && b.checkin >= addDays(todayIso(), -60));
   if (todo.length) html += `<button class="alert mt" onclick="go('mov');S.movFilter='completare';render()">${ic('alert')}<span style="flex:1"><b>${todo.length} prenotazion${todo.length > 1 ? 'i' : 'e'} da completare</b> · manca importo o check-out</span><b>Apri</b></button>`;
 
   // tassa di soggiorno del trimestre appena chiuso
@@ -464,7 +474,12 @@ function viewBilancio() {
 }
 
 // Home: calendario + check-in degli ospiti
-function viewHome() { return viewCal('Home') + ckContenuto(); }
+function viewHome() { return viewCal('Home') + avvisoValidare() + ckContenuto(); }
+function avvisoValidare() {
+  const v = daValidare();
+  if (!v.length) return '';
+  return `<button class="alert val mt" onclick="go('mov');S.movFilter='completare';render()">${ic('alert')}<span style="flex:1"><b>${v.length} import${v.length > 1 ? 'i' : 'o'} Booking da validare</b> · stimat${v.length > 1 ? 'i' : 'o'} ${STIMA_NOTTE_BOOKING} € a notte, controlla su Pulse</span><b>Apri</b></button>`;
+}
 
 function annualBars() {
   const rows = [];
@@ -626,7 +641,7 @@ function movements(r) {
   const out = [];
   S.data.bookings.forEach(b => {
     if (!inR(b.checkin, r)) return;
-    if (b.status === 'confermata') out.push({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + (isManual(b) ? 'Manuale' : CANALE[b.source]), s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}${b.checkout ? ' · ' + diffDays(b.checkin, b.checkout) + ' notti' : ''}`, a: b.payout, missing: b.payout == null || !b.checkout, color: colorOf(b) });
+    if (b.status === 'confermata') out.push({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + (isManual(b) ? 'Manuale' : CANALE[b.source]), s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}${b.checkout ? ' · ' + diffDays(b.checkin, b.checkout) + ' notti' : ''}`, a: importo(b), stim: stima(b) != null, missing: importo(b) == null || !b.checkout, color: colorOf(b) });
     else if (+b.payout > 0) out.push({ d: b.checkin, kind: 'in', b, t: 'Penale cancellazione', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: b.payout, color: '#9AA3AD' });
     if (ritenuta(b) > 0) out.push({ d: b.checkin, kind: 'out', b, t: 'Ritenuta fiscale Airbnb 21%', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: ritenuta(b), color: '#6B5B95', auto: ritStimata(b) ? 'STIMA' : 'AIRBNB' });
   });
@@ -646,7 +661,7 @@ function viewMov() {
   if (f === 'entrate') list = list.filter(x => x.kind === 'in');
   if (f === 'uscite') list = list.filter(x => x.kind === 'out');
   if (f === 'completare') list = S.data.bookings.filter(b => b.status === 'confermata' && (b.payout == null || !b.checkout))
-    .map(b => ({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + CANALE[b.source], s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}`, a: b.payout, missing: true, color: colorOf(b) })).sort((a, b) => b.d.localeCompare(a.d));
+    .map(b => ({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + CANALE[b.source], s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}`, a: importo(b), stim: stima(b) != null, missing: importo(b) == null || !b.checkout, color: colorOf(b) })).sort((a, b) => b.d.localeCompare(a.d));
   const totIn = list.filter(x => x.kind === 'in').reduce((s, x) => s + (+x.a || 0), 0), totOut = list.filter(x => x.kind === 'out').reduce((s, x) => s + (+x.a || 0), 0);
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.movFilter='${k}';render()">${l}</button>`;
   let html = header('Movimenti', false, true) + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
@@ -662,8 +677,8 @@ function viewMov() {
     const click = x.b ? `openBooking('${x.b.id}')` : x.x ? `openExpense('${x.x.id}')` : x.f ? `go('fisse')` : '';
     html += `<button class="item" ${click ? `onclick="${click}"` : 'disabled style="opacity:1;cursor:default"'}>
       <span class="dot" style="background:${x.color}"></span>
-      <div style="flex:1;min-width:0"><div class="t">${esc(x.t)}</div><div class="s">${x.s}${x.auto ? ` <span class="badge" style="background:#EEF0EC;color:var(--muted)">${x.auto}</span>` : ''}${x.missing ? ' <span class="badge" style="background:var(--amber-t);color:var(--amber-d)">DA COMPLETARE</span>' : ''}</div></div>
-      <span class="amt ${x.kind === 'in' ? 'plus' : 'minus'}">${x.a == null ? '—' : (x.kind === 'in' ? '+ ' : '− ') + eur(x.a)}</span></button>`;
+      <div style="flex:1;min-width:0"><div class="t">${esc(x.t)}</div><div class="s">${x.s}${x.auto ? ` <span class="badge" style="background:#EEF0EC;color:var(--muted)">${x.auto}</span>` : ''}${x.missing ? ' <span class="badge" style="background:var(--amber-t);color:var(--amber-d)">DA COMPLETARE</span>' : ''}${x.stim ? ' <span class="badge val">DA VALIDARE IMPORTO</span>' : ''}</div></div>
+      <span class="amt ${x.stim ? 'stim' : x.kind === 'in' ? 'plus' : 'minus'}">${x.a == null ? '—' : (x.stim ? '~ ' : x.kind === 'in' ? '+ ' : '− ') + eur(x.a)}</span></button>`;
   });
   return html + '</div></div>';
 }
@@ -718,8 +733,8 @@ function detRow(b, lab, extra, outline) {
   return `<button class="item" onclick="openBooking('${b.id}')"><span class="dot" style="${outline ? 'border:2px solid ' + colorOf(b) : 'background:' + colorOf(b)}"></span>
     <div style="flex:1;min-width:0"><div class="s" style="font-weight:700">${lab}</div><div class="t">${esc(b.guest_name || 'Ospite')}</div>
     <div class="s">${isManual(b) ? 'Manuale' : CANALE[b.source]} · ${dLabel(b.checkin)} – ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}${extra ? ' · ' + extra : ''}</div>
-    <div style="margin-top:6px">${ckPill(b)}</div></div>
-    <span class="amt">${b.payout != null ? eur(b.payout) : ''}</span></button>`;
+    <div style="margin-top:6px">${ckPill(b)}${stima(b) != null ? ' <span class="badge val">DA VALIDARE IMPORTO</span>' : ''}</div></div>
+    <span class="amt ${stima(b) != null ? 'stim' : ''}">${importo(b) != null ? (stima(b) != null ? '~ ' : '') + eur(importo(b)) : ''}</span></button>`;
 }
 function shiftMonth(d) { S.m += d; if (S.m < 0) { S.m = 11; S.y--; } if (S.m > 11) { S.m = 0; S.y++; } S.calDay = isoOf(S.y, S.m, 1); render(); }
 
@@ -889,7 +904,13 @@ function openBooking(id) {
       <div class="grid2" style="gap:8px"><div class="stack" style="gap:2px;background:var(--ground);border-radius:14px;padding:10px 12px"><span class="small muted">Arrivo</span>${giorno(b.checkin)}</div>
         <div class="stack" style="gap:2px;background:var(--ground);border-radius:14px;padding:10px 12px"><span class="small muted">Partenza</span>${b.checkout ? giorno(b.checkout) : '<b style="font-size:15px">da completare</b>'}</div></div>
       <div class="small muted">${n ? n + (n === 1 ? ' notte' : ' notti') : ''}${b.guests ? ' · ' + b.guests + ' ospiti' : ''} · ${from} · ${esc(b.code)}</div>
-      <div class="between" style="border-top:1px solid var(--line2);padding-top:12px"><span style="font-weight:700">Incassato</span><b style="font-size:18px">${b.payout != null ? eur(b.payout) : '<span style="color:var(--amber-d)">da inserire</span>'}</b></div>
+      ${stima(b) != null ? `<div class="stack" style="gap:10px;background:#FFF1B8;border-radius:16px;padding:14px">
+        <div class="between"><span style="font-weight:700;color:#4D3400">Incassato stimato</span><b class="stim" style="font-size:18px">${eur(stima(b))}</b></div>
+        <div class="small" style="color:#4D3400">${n} ${n === 1 ? 'notte' : 'notti'} × ${STIMA_NOTTE_BOOKING} € · Booking non invia l'importo: controllalo su Pulse</div>
+        <div class="badge val" style="align-self:flex-start;font-size:11px;padding:5px 10px">DA VALIDARE IMPORTO</div>
+        <div class="grid2"><button class="btn" style="height:44px;font-size:14px" onclick="validaStima('${b.id}')">Conferma</button>
+        <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="correggiStima()">Correggi</button></div></div>`
+      : `<div class="between" style="border-top:1px solid var(--line2);padding-top:12px"><span style="font-weight:700">Incassato</span><b style="font-size:18px">${b.payout != null ? eur(b.payout) : '<span style="color:var(--amber-d)">da inserire</span>'}</b></div>`}
       ${b.guest_total != null ? `<div class="small muted" style="margin-top:-8px">L'ospite ha pagato ${eur(b.guest_total)} · tassa di soggiorno ${eur(b.tourist_tax)}</div>` : ''}
       ${tel ? `<div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a>
         <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b, '')}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
@@ -1026,6 +1047,14 @@ async function condividi(text) {
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(text); toast('Messaggio copiato'); } catch (e) { toast('Copia non riuscita'); }
 }
+async function validaStima(id) {
+  const b = S.data.bookings.find(x => x.id === id), v = stima(b);
+  if (v == null) return;
+  const { error } = await sb.from('bookings').update({ payout: v }).eq('id', id);
+  if (error) return toast('Non salvato: ' + error.message);
+  b.payout = v; closeSheet(); toast('Importo confermato'); render();
+}
+function correggiStima() { const d = document.querySelector('.sheet details, details.card'); if (d) d.open = true; const a = $('#f_amt'); if (a) { a.scrollIntoView({ block: 'center' }); a.focus(); } }
 async function saveBooking(id) {
   const amt = $('#f_amt').value.trim();
   const upd = { payout: amt === '' ? null : num(amt), checkin: $('#f_in').value, checkout: $('#f_out').value || null, property: $('#f_prop').value,
