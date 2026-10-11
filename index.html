@@ -267,6 +267,8 @@ const dowOf = iso => parse(iso).getUTCDay();
 const dLabel = iso => { const d = parse(iso); return d.getUTCDate() + ' ' + MESI_B[d.getUTCMonth()]; };
 const num = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isNaN(n) ? null : n; };
 const isManual = b => b.source === 'diretta' || (b.manual && !b.email_id);
+// prenotazione nata su Booking e poi trasformata in diretta (tiene il numero Booking come codice)
+const exBooking = b => b.source === 'diretta' && /^\d{6,12}$/.test(String(b.code || ''));
 // Ritenuta fiscale Airbnb (cedolare 21%): valore esatto dalla mail di pagamento, altrimenti stima 22% di (incasso − tassa)
 const ritenuta = b => b.source !== 'airbnb' || !(+b.payout > 0) ? 0 : b.withholding != null ? +b.withholding : Math.round((+b.payout - (+b.tourist_tax || 0)) * 22) / 100;
 const ritStimata = b => b.source === 'airbnb' && +b.payout > 0 && b.withholding == null;
@@ -889,7 +891,7 @@ function simRender() {
 
 function openBooking(id) {
   const b = S.data.bookings.find(x => x.id === id);
-  const from = isManual(b) ? 'Inserita a mano' : (b.email_id ? 'Letta dalla mail ' : 'Dal calendario ') + CANALE[b.source];
+  const from = exBooking(b) ? 'Trasformata da Booking' : isManual(b) ? 'Inserita a mano' : (b.email_id ? 'Letta dalla mail ' : 'Dal calendario ') + CANALE[b.source];
   const [tb, tf] = CH_TINT[isManual(b) ? 'diretta' : b.source];
   const n = b.checkout ? diffDays(b.checkin, b.checkout) : null;
   const giorno = iso => { const d = parse(iso); return `<span class="small muted" style="font-weight:700">${GG_L[d.getUTCDay()]}</span><b style="font-size:20px">${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</b>`; };
@@ -915,6 +917,8 @@ function openBooking(id) {
       ${tel ? `<div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a>
         <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b, '')}" target="_blank" rel="noopener">WhatsApp</a></div>` : ''}
       ${b.note ? `<div class="small" style="background:var(--ground);border-radius:12px;padding:10px 12px;white-space:pre-line">${esc(b.note)}</div>` : ''}
+      ${b.source === 'booking' ? `<button class="btn" style="height:44px;font-size:14px;background:#fff;color:#17633A;border:1px solid #9CCFB0" onclick="openConverti('${b.id}')">⇄ Trasforma in prenotazione diretta</button>` : ''}
+      ${exBooking(b) ? `<div class="between small" style="background:#E2F3E8;color:#17633A;border-radius:12px;padding:10px 12px"><span>Era una prenotazione Booking n. ${esc(b.code)}</span><button style="border:0;background:none;color:#17633A;font-weight:700;text-decoration:underline" onclick="riportaBooking('${b.id}')">Annulla</button></div>` : ''}
     </div>
     ${b.status === 'confermata' ? ckBlock(b) : ''}
     <details class="card" ${b.payout == null || !b.checkout ? 'open' : ''}><summary style="font-weight:700;cursor:pointer;min-height:24px">Modifica prenotazione</summary>
@@ -1046,6 +1050,40 @@ async function copiaCheckin(id) { return condividi(msgCheckin(S.data.bookings.fi
 async function condividi(text) {
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(text); toast('Messaggio copiato'); } catch (e) { toast('Copia non riuscita'); }
+}
+// Booking → diretta: l'ospite cancella su Booking e paga direttamente a te
+function openConverti(id) {
+  const b = S.data.bookings.find(x => x.id === id);
+  const n = b.checkout ? diffDays(b.checkin, b.checkout) : null;
+  const pre = b.payout ?? stima(b);
+  sheet(sheetHead('Trasforma in diretta') + `<div class="stack" style="gap:14px">
+    <div class="card stack" style="gap:6px"><div class="small muted" style="font-weight:700;letter-spacing:.04em">ANTRUM ${(PROP[b.property] || '').toUpperCase()}</div>
+      <div style="font-size:20px;font-weight:800">${esc(b.guest_name || 'Ospite')}</div>
+      <div class="small muted">${dLabel(b.checkin)}${b.checkout ? ' – ' + dLabel(b.checkout) + ' · ' + n + (n === 1 ? ' notte' : ' notti') : ''} · Booking n. ${esc(b.code)}</div>
+      <div class="row" style="gap:8px;margin-top:6px;align-items:center"><span class="badge" style="background:${CH_TINT.booking[0]};color:${CH_TINT.booking[1]};font-size:11px;padding:5px 9px">Booking</span><span>→</span><span class="badge" style="background:${CH_TINT.diretta[0]};color:${CH_TINT.diretta[1]};font-size:11px;padding:5px 9px">Diretta</span></div></div>
+    <label class="field">Importo incassato direttamente<div class="money"><span>€</span><input id="c_amt" inputmode="decimal" value="${pre != null && b.payout != null ? String(pre).replace('.', ',') : ''}" placeholder="${pre != null ? String(pre).replace('.', ',') : '0,00'}"></div></label>
+    <div class="small muted">Niente commissioni Booking. Se poi arriva la mail di cancellazione di Booking, il tracker la ignora per questa prenotazione.</div>
+    <div class="alert">${ic('alert')}<span style="flex:1"><b>Blocca le date su Booking e Airbnb</b><br>Dopo la cancellazione su Booking le date tornano libere: chiudile tu per evitare doppie prenotazioni.</span></div>
+    <button class="btn" style="background:#1E8A4C" onclick="converti('${b.id}')">Trasforma in diretta</button>
+    <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="openBooking('${b.id}')">Annulla</button></div>`);
+}
+async function converti(id) {
+  const b = S.data.bookings.find(x => x.id === id);
+  const v = $('#c_amt').value.trim();
+  const amt = v === '' ? null : num(v);
+  if (v !== '' && amt == null) return toast('Importo non valido');
+  const upd = { source: 'diretta', manual: true, status: 'confermata', payout: amt, guest_total: null };
+  const { error } = await sb.from('bookings').update(upd).eq('id', id);
+  if (error) return toast('Non salvato: ' + error.message);
+  Object.assign(b, upd); toast('Ora è una prenotazione diretta'); render(); openBooking(id);
+}
+async function riportaBooking(id) {
+  if (!confirm('Riportare questa prenotazione su Booking?')) return;
+  const b = S.data.bookings.find(x => x.id === id);
+  const upd = { source: 'booking', manual: false };
+  const { error } = await sb.from('bookings').update(upd).eq('id', id);
+  if (error) return toast('Non salvato: ' + error.message);
+  Object.assign(b, upd); toast('Riportata su Booking'); render(); openBooking(id);
 }
 async function validaStima(id) {
   const b = S.data.bookings.find(x => x.id === id), v = stima(b);
