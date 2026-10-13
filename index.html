@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <style>
 :root{
   --ink:#121A21; --ground:#F4F5F2; --card:#FFFFFF; --line:#E3E5E0; --line2:#EEEFEC; --muted:#5E6670; --text2:#3F464D;
@@ -171,12 +171,13 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 .keys button{height:72px;border-radius:999px;border:0;background:#1D2730;color:#fff;font-size:26px;font-weight:700}
 .keys button.t{background:transparent;font-size:15px;font-weight:600}
 .err{color:#FFA79C;font-size:14px;min-height:20px}
+.sync{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:#1D2730;color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;opacity:.92;box-shadow:0 4px 14px rgba(0,0,0,.18);border:0}
 </style>
 </head>
 <body>
 <div id="root"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script>
 'use strict';
 // =====================================================================
@@ -311,6 +312,19 @@ async function loadData() {
   const err = b.error || e.error || f.error || a.error;
   if (err) throw err;
   S.data = { bookings: b.data, expenses: e.data, fixed: f.data, adj: a.data };
+  S.caricato = Date.now();
+  salvaCache();
+}
+// ultima copia dei dati sul telefono: all'apertura si vede subito, poi si aggiorna da Supabase
+const CACHE_DATI = 'antrum-dati-v1';
+function salvaCache() { try { localStorage.setItem(CACHE_DATI, JSON.stringify(S.data)); } catch (e) {} }
+function leggiCache() { try { const d = JSON.parse(localStorage.getItem(CACHE_DATI)); return d && Array.isArray(d.bookings) ? d : null; } catch (e) { return null; } }
+function svuotaCache() { try { localStorage.removeItem(CACHE_DATI); } catch (e) {} }
+const haSessione = () => { try { return Object.keys(localStorage).some(k => /^sb-.+-auth-token$/.test(k)); } catch (e) { return false; } };
+function aggiornando(on) {
+  const el = $('#sync');
+  if (on && !el) document.body.insertAdjacentHTML('beforeend', '<div id="sync" class="sync" role="status">Aggiornamento…</div>');
+  if (!on && el) el.remove();
 }
 
 // =====================================================================
@@ -1279,11 +1293,36 @@ async function key(k) {
   }
 }
 document.addEventListener('keydown', e => { if ($('.login')) { if (/^\d$/.test(e.key)) key(e.key); if (e.key === 'Backspace') key('del'); } if (e.key === 'Escape') closeSheet(); });
-async function logout() { await sb.auth.signOut(); loginView(); }
-async function start() {
-  $('#root').innerHTML = '<div class="empty" style="padding-top:40vh">Caricamento…</div>';
-  try { await loadData(); render(); apriDaLink(); }
-  catch (e) { if (/JWT|auth/i.test(e.message)) return loginView(); $('#root').innerHTML = `<div class="empty" style="padding-top:35vh">Impossibile caricare i dati: ${esc(e.message)}<br><br><button class="btn" style="width:auto;padding:0 24px" onclick="start()">Riprova</button></div>`; }
+async function logout() { svuotaCache(); S.data = { bookings: [], expenses: [], fixed: [], adj: [] }; await sb.auth.signOut(); loginView(); }
+function mostraCache() {
+  const d = leggiCache();
+  if (!d) return false;
+  S.data = d; render(); aggiornando(true);
+  return true;
+}
+async function start(giaMostrato) {
+  if (!giaMostrato) $('#root').innerHTML = '<div class="empty" style="padding-top:40vh">Caricamento…</div>';
+  const prima = giaMostrato ? JSON.stringify(S.data) : null;
+  try {
+    await loadData();
+    if (JSON.stringify(S.data) !== prima) render();   // ridisegno solo se qualcosa è cambiato
+    apriDaLink();
+  } catch (e) {
+    if (/JWT|auth/i.test(e.message)) { svuotaCache(); return loginView(); }
+    if (giaMostrato) { toast('Senza rete: dati dell\'ultimo aggiornamento'); apriDaLink(); }
+    else $('#root').innerHTML = `<div class="empty" style="padding-top:35vh">Impossibile caricare i dati: ${esc(e.message)}<br><br><button class="btn" style="width:auto;padding:0 24px" onclick="start()">Riprova</button></div>`;
+  } finally { aggiornando(false); }
+}
+// app riaperta dopo un po' (era in background): aggiorno in silenzio
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !S.caricato || Date.now() - S.caricato < 60000 || $('.login')) return;
+  const prima = JSON.stringify(S.data);
+  try { await loadData(); if (JSON.stringify(S.data) !== prima && !$('#ov')) render(); } catch (e) { /* riprovo alla prossima */ }
+});
+// nuova versione pubblicata: invito ad aggiornare (niente ricarica a sorpresa)
+function nuovaVersione() {
+  if ($('#nv')) return;
+  document.body.insertAdjacentHTML('beforeend', '<button id="nv" class="sync" style="top:auto;bottom:calc(env(safe-area-inset-bottom) + 84px);font-size:13px;padding:10px 16px;white-space:nowrap" onclick="location.reload()">Nuova versione disponibile · Aggiorna</button>');
 }
 // ---------------- Notifiche push (promemoria pulizie) ----------------
 const PUSH_FN = SUPABASE_URL + '/functions/v1/notifiche';
@@ -1340,9 +1379,14 @@ function pushCard() {
 }
 
 (async () => {
+  const pronto = haSessione() && mostraCache();      // dati dell'ultima volta subito a schermo
   const { data } = await sb.auth.getSession();
-  if (data.session) start(); else loginView();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (data.session) start(pronto); else { aggiornando(false); svuotaCache(); loginView(); }
+  if ('serviceWorker' in navigator) {
+    const giaAttivo = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (giaAttivo) nuovaVersione(); });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
   if (data.session) pushInit();
 })();
 </script>
