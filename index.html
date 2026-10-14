@@ -844,9 +844,16 @@ function apriInterno(url, titolo, bid) {
   S.webBid = bid || null;
   document.body.insertAdjacentHTML('beforeend', `<div id="web" class="web" role="dialog" aria-label="${esc(titolo)}"><div class="webbar">
     <button class="iconbtn" aria-label="Indietro" onclick="chiudiInterno()">${ic('left', 18)}</button><b style="flex:1;min-width:0">${esc(titolo)}</b></div>
-    <iframe src="${esc(url)}" title="${esc(titolo)}"></iframe></div>`);
+    <iframe id="webf" ${/[?&]a=conferma/.test(url) ? '' : `src="${esc(url)}"`} title="${esc(titolo)}"></iframe></div>`);
   document.body.style.overflow = 'hidden';
   try { history.pushState({ web: 1 }, ''); } catch (e) {}
+  if (/[?&]a=conferma/.test(url)) caricaInterno(url);   // pagina Questura: arriva come dati e si mostra qui dentro
+}
+async function caricaInterno(url) {
+  const f = $('#webf'), msg = t => `<p style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:28px 20px;color:#5E6670;font-size:16px">${t}</p>`;
+  f.srcdoc = msg('Caricamento…');
+  try { const j = await (await fetch(url + '&fmt=json')).json(); if ($('#webf') === f) f.srcdoc = j.html || msg('Pagina non disponibile.'); }
+  catch (e) { if ($('#webf') === f) f.srcdoc = msg('Impossibile aprire la pagina: controlla la connessione e riprova.'); }
 }
 function chiudiInterno() {
   if (!$('#web')) return;
