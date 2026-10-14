@@ -268,7 +268,7 @@ function riempiListe() {
 // ===================== Interfaccia =====================
 function render() {
   if (S.done) { $('#app').innerHTML = topbar() + `<div class="done"><div class="ok">✓</div><h1>${t('grazie')}</h1><p>${S.mod ? t('grazieMod') : t('grazieT')}</p>
-    ${qs.get('host') === '1' ? `<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:22px;background:#121A21" href="https://enricode89.github.io/tracker-antrum/?apri=${encodeURIComponent(qs.get('b') || '')}">← ${t('torna')}</a>` : ''}</div>`; return; }
+    ${qs.get('host') === '1' ? `<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:22px;background:#121A21" href="https://enricode89.github.io/tracker-antrum/?apri=${encodeURIComponent(qs.get('b') || '')}" onclick="if (window.parent !== window) { parent.postMessage('antrum:chiudi', '*'); return false; }">← ${t('torna')}</a>` : ''}</div>`; return; }
   const p = S.pren;
   const notti = p.partenza ? Math.round((Date.parse(p.partenza) - Date.parse(p.arrivo)) / 864e5) : null;
   $('#app').innerHTML = topbar() + `
