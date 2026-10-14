@@ -171,6 +171,9 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 .keys button{height:72px;border-radius:999px;border:0;background:#1D2730;color:#fff;font-size:26px;font-weight:700}
 .keys button.t{background:transparent;font-size:15px;font-weight:600}
 .err{color:#FFA79C;font-size:14px;min-height:20px}
+.web{position:fixed;inset:0;z-index:90;background:var(--ground);display:flex;flex-direction:column}
+.webbar{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#fff;border-bottom:1px solid #E4E6E1;font-size:16px}
+.web iframe{flex:1;width:100%;border:0;background:var(--ground)}
 .sync{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:#1D2730;color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;opacity:.92;box-shadow:0 4px 14px rgba(0,0,0,.18);border:0}
 </style>
 </head>
@@ -835,6 +838,27 @@ function sheet(html) {
   const f = o.querySelector('input,select,button'); if (f) f.focus();
 }
 function closeSheet() { const o = $('#ov'); if (o) o.remove(); }
+// Modulo check-in e pagina "Invio alla Questura" dentro l'app: finestra a tutto schermo con la freccia per tornare
+function apriInterno(url, titolo, bid) {
+  const w = $('#web'); if (w) w.remove();
+  S.webBid = bid || null;
+  document.body.insertAdjacentHTML('beforeend', `<div id="web" class="web" role="dialog" aria-label="${esc(titolo)}"><div class="webbar">
+    <button class="iconbtn" aria-label="Indietro" onclick="chiudiInterno()">${ic('left', 18)}</button><b style="flex:1;min-width:0">${esc(titolo)}</b></div>
+    <iframe src="${esc(url)}" title="${esc(titolo)}"></iframe></div>`);
+  document.body.style.overflow = 'hidden';
+  try { history.pushState({ web: 1 }, ''); } catch (e) {}
+}
+function chiudiInterno() {
+  if (!$('#web')) return;
+  if (history.state && history.state.web) history.back(); else chiusoInterno();   // il "back" chiude tramite popstate
+}
+async function chiusoInterno() {
+  const w = $('#web'); if (!w) return;
+  w.remove(); document.body.style.overflow = '';
+  try { await loadData(); render(); if (S.webBid && $('#ov')) openBooking(S.webBid); } catch (e) {}   // stato check-in aggiornato
+}
+window.addEventListener('popstate', () => { if ($('#web')) chiusoInterno(); });       // freccia/gesto "indietro" del telefono
+window.addEventListener('message', e => { if (e.data === 'antrum:chiudi') chiudiInterno(); });   // "Torna al tracker" dal modulo
 const sheetHead = t => `<div class="between" style="margin-bottom:16px"><h2 style="font-size:22px;font-weight:800">${t}</h2><button class="iconbtn" aria-label="Chiudi" onclick="closeSheet()">${ic('x', 18)}</button></div>`;
 const propSel = (v, entrambe) => `<select id="f_prop"><option value="loft" ${v === 'loft' ? 'selected' : ''}>Loft</option><option value="suite" ${v === 'suite' ? 'selected' : ''}>Suite</option>${entrambe ? `<option value="entrambe" ${v === 'entrambe' ? 'selected' : ''}>Entrambe (metà ciascuna)</option>` : ''}</select>`;
 
@@ -981,10 +1005,10 @@ function ckBlock(b) {
         ${st === 'attesa' && futuro ? `<p class="small" style="margin:8px 0;white-space:pre-line;background:var(--ground);border-radius:12px;padding:10px">${esc(msgCheckin(b))}</p>
         <div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:46px;font-size:15px" href="${waLink(b)}" target="_blank" rel="noopener">WhatsApp</a>
         <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:46px;font-size:15px" onclick="copiaCheckin('${b.id}')">Copia</button></div>
-        <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;color:var(--ink);border:1px dashed var(--line);height:46px;font-size:15px;margin-top:8px" href="${CHECKIN_URL}?b=${b.id}&lang=it&host=1" target="_blank" rel="noopener">Compila tu (documenti e selfie dell'ospite)</a>` : ''}</div></div>
+        <a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;color:var(--ink);border:1px dashed var(--line);height:46px;font-size:15px;margin-top:8px" href="${CHECKIN_URL}?b=${b.id}&lang=it&host=1" onclick="apriInterno(this.href,'Check-in · compila tu','${b.id}');return false">Compila tu (documenti e selfie dell'ospite)</a>` : ''}</div></div>
       <div class="step">${k(st === 'inviato', 2, '#1E7A45')}<div style="flex:1;min-width:0"><b style="font-size:14px">Invio alla Questura</b>
         <div class="small muted">${st === 'inviato' ? 'Inviato il ' + dtLabel(b.checkin_sent_at) + ' · ricevuta via email' : st === 'ricevuto' ? (b.checkin <= todayIso() ? 'Pronto da inviare' : 'Si può inviare dal ' + dLabel(b.checkin)) : 'Dopo che l\'ospite ha compilato'}</div>
-        ${st === 'ricevuto' && b.checkin_url ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:46px;font-size:15px;margin-top:8px" href="${esc(b.checkin_url)}" target="_blank" rel="noopener">Rivedi e invia alla Questura</a>` : ''}</div></div>
+        ${st === 'ricevuto' && b.checkin_url ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:46px;font-size:15px;margin-top:8px" href="${esc(b.checkin_url)}" onclick="apriInterno(this.href,'Invio alla Questura','${b.id}');return false">Rivedi e invia alla Questura</a>` : ''}</div></div>
     </div>
     ${ckUrgenza(b) ? `<div class="alert" style="background:var(--red-t);color:var(--red-d)">${ic('alert')}<span style="flex:1"><b>Non ancora inviato in Questura</b><br>L'ospite ha compilato i dati: verifica e invia ${ckUrgenza(b) === 'oggi' ? 'oggi' : ckUrgenza(b) === 'subito' ? 'subito (entro 24 ore dall\'arrivo)' : 'appena puoi: sono passate più di 24 ore dall\'arrivo'}.</span></div>` : ''}
     ${st === 'inviato' ? `<div style="background:#E2F3E8;color:#15633A;border-radius:16px;padding:14px" class="stack">
@@ -1055,7 +1079,7 @@ function ckContenuto() {
         <div style="margin-top:6px">${ckPill(b)}</div></div>${ic('right', 18)}</button>
       ${st === 'attesa' ? `<div class="grid2"><a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${waLink(b)}" target="_blank" rel="noopener">WhatsApp</a>
         <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" onclick="copiaCheckin('${b.id}')">Copia link</button></div>` : ''}
-      ${st === 'ricevuto' && b.checkin_url ? (b.checkin <= todayIso() ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:42px;font-size:14px" href="${esc(b.checkin_url)}" target="_blank" rel="noopener">Rivedi e invia alla Questura</a>`
+      ${st === 'ricevuto' && b.checkin_url ? (b.checkin <= todayIso() ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:42px;font-size:14px" href="${esc(b.checkin_url)}" onclick="apriInterno(this.href,'Invio alla Questura','${b.id}');return false">Rivedi e invia alla Questura</a>`
         : `<div class="small muted" style="text-align:center">Si può inviare dal ${dLabel(b.checkin)}</div>`) : ''}
       ${st === 'inviato' ? `<div class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</div>` : ''}</div>`;
   };
