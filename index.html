@@ -135,7 +135,7 @@ nav.bottom [aria-current="page"]{color:var(--ink);font-weight:800}
 .fab{width:56px;height:56px;border-radius:18px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;border:0}
 nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}
 .ckg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ckg img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:12px;background:var(--ground);cursor:zoom-in}
-.zoom{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.zoom img{max-width:100%;max-height:100%;border-radius:8px}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.zoom .zl{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 24px);left:50%;transform:translateX(-50%);background:rgba(255,255,255,.15);color:#fff;font-size:14px;padding:6px 12px;border-radius:99px}.zoom img{width:100%;object-fit:contain}.zoom img{max-width:100%;max-height:100%;border-radius:8px}
 .ckc{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:0}
 
 /* sheet */
@@ -1031,20 +1031,26 @@ function ckBlock(b) {
 // dati compilati dall'ospite + foto dei documenti (dallo script Questura, link firmato)
 const CKD = {};
 async function caricaCkDati(b) {
-  const el = () => $('#ckdati');
-  try {
-    let d = CKD[b.id];
-    // prima i dati (subito), poi le foto con una seconda chiamata: la scheda non resta in attesa
-    if (!d) { const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio'); u.searchParams.set('foto', '0'); d = await fetch(u).then(r => r.json()); d.senzaFoto = true; }
+  const el = () => $('#ckdati'), c = CKD[b.id];
+  if (c && !c.senzaFoto) { if (el()) el().outerHTML = ckDatiHtml(c, b); return; }
+  const url = foto => { const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio'); if (!foto) u.searchParams.set('foto', '0'); return u; };
+  // dati e miniature partono INSIEME: i dati appaiono appena arrivano (~3 s), le foto subito dopo
+  let completo = false, fotoKo = false, datiKo = null;
+  const mostra = d => {
     if (!d.ok) throw new Error(d.errore || 'non disponibili');
-    CKD[b.id] = d;
-    if (el()) el().outerHTML = ckDatiHtml(d, b);
-    if (d.senzaFoto && d.ospiti.some(g => g.nFoto)) {
-      const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio');
-      const f = await fetch(u).then(r => r.json());
-      if (f.ok) { CKD[b.id] = f; if (el()) el().outerHTML = ckDatiHtml(f, b); }
-    }
-  } catch (e) { if (el()) el().textContent = 'Dati non caricati: ' + e.message; }
+    if (completo) return;
+    if (!d.senzaFoto) completo = true; else d.fotoKo = fotoKo;
+    CKD[b.id] = d; if (el()) el().outerHTML = ckDatiHtml(d, b);
+  };
+  const errore = e => { if (!CKD[b.id] && el()) el().textContent = 'Dati non caricati: ' + e.message; };
+  const pDati = c ? Promise.resolve(c) : fetch(url(false)).then(r => r.json()).then(d => Object.assign(d, { senzaFoto: true }));
+  pDati.then(mostra).catch(e => { datiKo = e; if (fotoKo) errore(e); });
+  fetch(url(true)).then(r => r.json()).then(mostra).catch(e => {
+    fotoKo = true;
+    const d = CKD[b.id];
+    if (d && !completo) mostra(d);            // dati già visibili: "foto non caricate"
+    else if (datiKo) errore(datiKo);          // falliti entrambi
+  });
 }
 function ckDatiHtml(d, b) {
   const r = (k, v) => v ? `<div style="display:flex;justify-content:space-between;gap:12px"><span class="muted" style="flex-shrink:0">${k}</span><span style="text-align:right;font-weight:600">${esc(v)}</span></div>` : '';
@@ -1058,7 +1064,7 @@ function ckDatiHtml(d, b) {
       <div class="between"><b>${esc(g.nome)}</b><span class="small muted">${ruolo(i)}</span></div>
       ${d.stato === 'inviata' || (d.giaInviati || []).includes(g.nome) ? '<span class="badge" style="background:#E2F3E8;color:#15633A;align-self:flex-start">✓ IN QUESTURA</span>' : ''}
       <div class="small stack" style="gap:4px">${r('Sesso', g.sesso)}${r('Nato il', g.nascita)}${r('Luogo di nascita', g.luogoNascita)}${r('Cittadinanza', g.cittadinanza)}${r('Documento', g.documento)}</div>
-      ${g.foto.length ? `<div class="ckg">${g.foto.map(f => `<img src="${f.src}" alt="${esc(f.nome)}" onclick="zoomFoto(this.src)">`).join('')}</div>` : d.senzaFoto && g.nFoto ? `<div class="small muted">Carico ${g.nFoto} foto…</div>` : scadute ? '<div class="small muted">Foto eliminate 30 giorni dopo la partenza (privacy)</div>' : '<div class="small" style="background:var(--red-t);color:var(--red-d);border-radius:10px;padding:8px 10px;font-weight:700">⚠ Mancano le foto di questo ospite: rimanda il link (qui sotto) per farle caricare</div>'}
+      ${g.foto.length ? `<div class="ckg">${g.foto.map(f => `<img src="${f.src}" alt="${esc(f.nome)}" onclick="zoomFoto(this.src${f.mini ? `,'${f.id}','${b.id}'` : ''})">`).join('')}</div>` : d.senzaFoto && g.nFoto ? `<div class="small muted">${d.fotoKo ? 'Foto non caricate: chiudi e riapri la scheda' : `Carico ${g.nFoto} foto…`}</div>` : scadute ? '<div class="small muted">Foto eliminate 30 giorni dopo la partenza (privacy)</div>' : '<div class="small" style="background:var(--red-t);color:var(--red-d);border-radius:10px;padding:8px 10px;font-weight:700">⚠ Mancano le foto di questo ospite: rimanda il link (qui sotto) per farle caricare</div>'}
     </div>`).join('')}
     ${d.contatto && (d.contatto.email || d.contatto.tel) ? `<div class="small muted">Contatto: ${esc([d.contatto.email, d.contatto.tel].filter(Boolean).join(' · '))}</div>` : ''}
     ${d.linkModifica && b.checkout >= todayIso() ? `<div style="border-top:1px solid var(--line2);padding-top:10px" class="stack">
@@ -1072,9 +1078,20 @@ function msgModifica(b, link) {
   const nome = (b.guest_name || '').trim().split(/\s+/)[0] || '';
   return `Ciao ${nome}, ecco il link per correggere o completare i dati del check-in (puoi anche aggiungere persone). Trovi già tutto compilato: modifica e premi "Invia le modifiche".\n${link}`;
 }
-function zoomFoto(src) {
+// la griglia mostra miniature leggere: al tocco si apre subito la miniatura ingrandita e poi arriva la foto intera
+const FOTO = {};
+function zoomFoto(src, fid, bid) {
   const z = document.createElement('div'); z.className = 'zoom'; z.setAttribute('role', 'dialog'); z.setAttribute('aria-label', 'Foto documento, tocca per chiudere');
-  z.innerHTML = `<img src="${src}" alt="">`; z.onclick = () => z.remove(); document.body.appendChild(z);
+  const piena = fid && FOTO[fid];
+  z.innerHTML = `<img src="${piena || src}" alt="">${fid && !piena ? '<div class="zl">Carico la foto intera…</div>' : ''}`;
+  z.onclick = () => z.remove(); document.body.appendChild(z);
+  const b = fid && !piena && S.data.bookings.find(x => x.id === bid);
+  if (!b || !b.checkin_url) return;
+  const u = new URL(b.checkin_url); u.searchParams.set('a', 'foto'); u.searchParams.set('f', fid);
+  fetch(u).then(r => r.json()).then(r => {
+    if (!r.ok) throw new Error(r.errore);
+    FOTO[fid] = r.src; z.querySelector('img').src = r.src; const l = z.querySelector('.zl'); if (l) l.remove();
+  }).catch(() => { const l = z.querySelector('.zl'); if (l) l.textContent = 'Foto intera non caricata'; });
 }
 // sezione Check-in: prenotazioni in corso e in arrivo + inviate negli ultimi 30 giorni
 function ckLista() {
