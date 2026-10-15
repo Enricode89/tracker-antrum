@@ -141,6 +141,7 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(18,26,33,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--ground);width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(24px + var(--safe-b));animation:up .22s ease-out}
+.overlay.full{align-items:stretch;background:var(--ground)}.overlay.full .sheet{max-height:none;height:100%;max-width:640px;border-radius:0;padding-top:calc(env(safe-area-inset-top) + 14px);-webkit-overflow-scrolling:touch}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
 .field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -174,7 +175,7 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 .web{position:fixed;inset:0;z-index:90;background:var(--ground);display:flex;flex-direction:column}
 .webbar{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#fff;border-bottom:1px solid #E4E6E1;font-size:16px}
 .web iframe{flex:1;width:100%;border:0;background:var(--ground)}
-.sync{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:60;background:#1D2730;color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;opacity:.92;box-shadow:0 4px 14px rgba(0,0,0,.18);border:0}
+.sync{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:35;background:#1D2730;color:#fff;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;opacity:.92;box-shadow:0 4px 14px rgba(0,0,0,.18);border:0}
 </style>
 </head>
 <body>
@@ -829,15 +830,18 @@ function viewFisse() {
 // =====================================================================
 // Sheet: prenotazione / spesa / nuovo / fissa
 // =====================================================================
-function sheet(html) {
+function sheet(html, full) {
   closeSheet();
-  const o = document.createElement('div'); o.className = 'overlay'; o.id = 'ov';
+  const o = document.createElement('div'); o.className = 'overlay' + (full ? ' full' : ''); o.id = 'ov';
   o.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
   o.addEventListener('click', e => { if (e.target === o) closeSheet(); });
   document.body.appendChild(o);
-  const f = o.querySelector('input,select,button'); if (f) f.focus();
+  if (full) { document.body.style.overflow = 'hidden'; if (!(history.state && history.state.sheet)) try { history.pushState({ sheet: 1 }, ''); } catch (e) {} }
+  else { const f = o.querySelector('input,select'); if (f) f.focus({ preventScroll: true }); }
 }
-function closeSheet() { const o = $('#ov'); if (o) o.remove(); }
+function closeSheet() { const o = $('#ov'); if (o) { o.remove(); if (!$('#web')) document.body.style.overflow = ''; } }
+// X / freccia di una schermata intera: chiude anche il passo nella cronologia (così il gesto "indietro" resta coerente)
+function chiudiScheda() { if ($('#ov.full') && history.state && history.state.sheet) history.back(); else closeSheet(); }
 // Modulo check-in e pagina "Invio alla Questura" dentro l'app: finestra a tutto schermo con la freccia per tornare
 function apriInterno(url, titolo, bid) {
   const w = $('#web'); if (w) w.remove();
@@ -864,9 +868,9 @@ async function chiusoInterno() {
   w.remove(); document.body.style.overflow = '';
   try { await loadData(); render(); if (S.webBid && $('#ov')) openBooking(S.webBid); } catch (e) {}   // stato check-in aggiornato
 }
-window.addEventListener('popstate', () => { if ($('#web')) chiusoInterno(); });       // freccia/gesto "indietro" del telefono
+window.addEventListener('popstate', () => { if ($('#web')) chiusoInterno(); else if ($('#ov')) closeSheet(); });       // freccia/gesto "indietro" del telefono
 window.addEventListener('message', e => { if (e.data === 'antrum:chiudi') chiudiInterno(); });   // "Torna al tracker" dal modulo
-const sheetHead = t => `<div class="between" style="margin-bottom:16px"><h2 style="font-size:22px;font-weight:800">${t}</h2><button class="iconbtn" aria-label="Chiudi" onclick="closeSheet()">${ic('x', 18)}</button></div>`;
+const sheetHead = t => `<div class="between" style="margin-bottom:16px"><h2 style="font-size:22px;font-weight:800">${t}</h2><button class="iconbtn" aria-label="Chiudi" onclick="chiudiScheda()">${ic('x', 18)}</button></div>`;
 const propSel = (v, entrambe) => `<select id="f_prop"><option value="loft" ${v === 'loft' ? 'selected' : ''}>Loft</option><option value="suite" ${v === 'suite' ? 'selected' : ''}>Suite</option>${entrambe ? `<option value="entrambe" ${v === 'entrambe' ? 'selected' : ''}>Entrambe (metà ciascuna)</option>` : ''}</select>`;
 
 // ---------------- Simulatore prezzo Airbnb / Booking ----------------
@@ -983,7 +987,7 @@ function openBooking(id) {
       <button class="btn" onclick="saveBooking('${b.id}')">Salva</button>
       ${b.manual && !b.email_id ? `<button class="btn ghost" onclick="delBooking('${b.id}')">Elimina prenotazione</button>` : ''}
     </div></details>
-    </div>`);
+    </div>`, true);   // scheda del soggiorno: a schermo intero
   if (b.status === 'confermata' && b.checkin_url && ckStato(b) !== 'attesa') caricaCkDati(b);
 }
 // stato check-in Questura: null → ricevuto (ospite ha compilato) → inviato (schedine in Questura)
@@ -1030,17 +1034,23 @@ async function caricaCkDati(b) {
   const el = () => $('#ckdati');
   try {
     let d = CKD[b.id];
-    if (!d) { const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio'); d = await fetch(u).then(r => r.json()); }
+    // prima i dati (subito), poi le foto con una seconda chiamata: la scheda non resta in attesa
+    if (!d) { const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio'); u.searchParams.set('foto', '0'); d = await fetch(u).then(r => r.json()); d.senzaFoto = true; }
     if (!d.ok) throw new Error(d.errore || 'non disponibili');
     CKD[b.id] = d;
     if (el()) el().outerHTML = ckDatiHtml(d, b);
+    if (d.senzaFoto && d.ospiti.some(g => g.nFoto)) {
+      const u = new URL(b.checkin_url); u.searchParams.set('a', 'dettaglio');
+      const f = await fetch(u).then(r => r.json());
+      if (f.ok) { CKD[b.id] = f; if (el()) el().outerHTML = ckDatiHtml(f, b); }
+    }
   } catch (e) { if (el()) el().textContent = 'Dati non caricati: ' + e.message; }
 }
 function ckDatiHtml(d, b) {
   const r = (k, v) => v ? `<div style="display:flex;justify-content:space-between;gap:12px"><span class="muted" style="flex-shrink:0">${k}</span><span style="text-align:right;font-weight:600">${esc(v)}</span></div>` : '';
   const ruolo = i => d.ospiti.length === 1 ? 'Ospite singolo' : i ? (d.gruppo === 'famiglia' ? 'Familiare' : 'Membro gruppo') : (d.gruppo === 'famiglia' ? 'Capofamiglia' : 'Capogruppo');
   const scadute = b.checkout && new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10) >= b.checkout;
-  return `<div class="stack" style="gap:10px;margin-top:6px">
+  return `<div class="stack" id="ckdati" style="gap:10px;margin-top:6px">
     <b style="font-size:14px">Dati compilati · ${d.ospiti.length} ${d.ospiti.length === 1 ? 'ospite' : 'ospiti'}${d.modificato ? ' <span class="badge" style="background:var(--amber-t);color:var(--amber-d)">AGGIORNATI DALL\'OSPITE</span>' : ''}</b>
     ${d.giaInviati && d.giaInviati.length && d.stato !== 'inviata' ? `<div class="small muted">Già in Questura dall'invio precedente: ${esc(d.giaInviati.join(', '))}</div>` : ''}
     ${d.errori && d.errori.length ? `<div class="alert" style="background:var(--red-t);color:var(--red-d)">Ultimo invio rifiutato: ${esc(d.errori.join(' · '))}</div>` : ''}
@@ -1048,7 +1058,7 @@ function ckDatiHtml(d, b) {
       <div class="between"><b>${esc(g.nome)}</b><span class="small muted">${ruolo(i)}</span></div>
       ${d.stato === 'inviata' || (d.giaInviati || []).includes(g.nome) ? '<span class="badge" style="background:#E2F3E8;color:#15633A;align-self:flex-start">✓ IN QUESTURA</span>' : ''}
       <div class="small stack" style="gap:4px">${r('Sesso', g.sesso)}${r('Nato il', g.nascita)}${r('Luogo di nascita', g.luogoNascita)}${r('Cittadinanza', g.cittadinanza)}${r('Documento', g.documento)}</div>
-      ${g.foto.length ? `<div class="ckg">${g.foto.map(f => `<img src="${f.src}" alt="${esc(f.nome)}" onclick="zoomFoto(this.src)">`).join('')}</div>` : scadute ? '<div class="small muted">Foto eliminate 30 giorni dopo la partenza (privacy)</div>' : '<div class="small" style="background:var(--red-t);color:var(--red-d);border-radius:10px;padding:8px 10px;font-weight:700">⚠ Mancano le foto di questo ospite: rimanda il link (qui sotto) per farle caricare</div>'}
+      ${g.foto.length ? `<div class="ckg">${g.foto.map(f => `<img src="${f.src}" alt="${esc(f.nome)}" onclick="zoomFoto(this.src)">`).join('')}</div>` : d.senzaFoto && g.nFoto ? `<div class="small muted">Carico ${g.nFoto} foto…</div>` : scadute ? '<div class="small muted">Foto eliminate 30 giorni dopo la partenza (privacy)</div>' : '<div class="small" style="background:var(--red-t);color:var(--red-d);border-radius:10px;padding:8px 10px;font-weight:700">⚠ Mancano le foto di questo ospite: rimanda il link (qui sotto) per farle caricare</div>'}
     </div>`).join('')}
     ${d.contatto && (d.contatto.email || d.contatto.tel) ? `<div class="small muted">Contatto: ${esc([d.contatto.email, d.contatto.tel].filter(Boolean).join(' · '))}</div>` : ''}
     ${d.linkModifica && b.checkout >= todayIso() ? `<div style="border-top:1px solid var(--line2);padding-top:10px" class="stack">
