@@ -523,7 +523,28 @@ function ckStriscia() {
   return `<button class="ckstr${urg ? ' urg' : ''}" onclick="apriCk()" aria-label="Check-in ospiti: ${inv} da inviare, ${att} in attesa, ${ok} inviati">
     <b>Check-in</b><span class="ckchips">${parti || '<span class="ckchip v">tutto in ordine ✓</span>'}</span>${ic('right', 18)}</button>`;
 }
-function apriCk(f) { if (f) S.ckFilter = f; sheet(sheetHead('Check-in ospiti') + ckContenuto(), true); }
+function apriCk(f) {
+  if (f) S.ckFilter = f;
+  sheet(sheetHead('Check-in ospiti') + ckContenuto() + sinfRiga(), true);
+  if (!S.sinf || Date.now() - S.sinf.t > 5 * 60e3) caricaSinfonia();
+}
+// Sinfonia (statistiche ISTAT): ultima giornata registrata per struttura, letta dalla Regione tramite lo script
+function sinfRiga() {
+  const s = S.sinf && S.sinf.d, d = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '—';
+  const ieri = addDays(todayIso(), -1), ok = s && ['loft', 'suite'].every(k => s[k] && s[k] >= ieri);
+  const bg = !s ? '#EEF0EC' : ok ? 'var(--green-t)' : 'var(--amber-t)', fg = !s ? 'var(--muted)' : ok ? 'var(--green-d)' : 'var(--amber-d)';
+  return `<div id="sinfst" class="small" style="margin:18px 0 4px;padding:10px 12px;border-radius:12px;background:${bg};color:${fg};font-weight:700">Sinfonia ISTAT · ${s ? `Loft al ${d(s.loft)} · Suite al ${d(s.suite)}${ok ? ' ✓' : ''}` : 'carico…'}</div>`;
+}
+async function caricaSinfonia() {
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch(SCRIPT_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ azione: 'sinfonia', token: data && data.session ? data.session.access_token : '' }) }).then(x => x.json());
+    if (!r.ok) throw new Error(r.errore);
+    S.sinf = { t: Date.now(), d: r.sinfonia };
+    const el = $('#sinfst'); if (el) el.outerHTML = sinfRiga();
+  } catch (e) { const el = $('#sinfst'); if (el) el.textContent = 'Sinfonia ISTAT · stato non disponibile'; }
+}
 function avvisoValidare() {
   const v = daValidare();
   if (!v.length) return '';
