@@ -42,6 +42,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--red);backg
 .seg{display:flex;gap:8px}
 .seg button{flex:1;height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-weight:700;color:var(--ink)}
 .seg button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg.bad button{border:2px solid var(--red);background:var(--red-t)}
 .hint{font-size:12px;color:var(--muted);margin-top:4px}
 .photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .ph{position:relative;border:1.5px dashed #C9CCC6;border-radius:14px;height:110px;display:grid;place-items:center;text-align:center;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;background:#FAFAF8}
@@ -91,7 +92,7 @@ const T = {
     cerca: 'Scrivi e scegli dall\'elenco', contatto: 'Contatto', email: 'Email', tel: 'Telefono', facolt: 'facoltativo',
     privacy: 'Acconsento al trattamento dei dati per la comunicazione obbligatoria alla Questura (art. 109 TULPS). I dati non vengono usati per altri scopi e le foto dei documenti vengono cancellate entro 30 giorni dalla partenza.',
     invia: 'Invia i dati', invio: 'Invio in corso…', grazie: 'Grazie!', grazieT: 'Abbiamo ricevuto i vostri dati. Ci vediamo presto!', scan: 'Fotografa il documento', scanT: 'Dalla foto del retro della carta d\'identità (righe <<<) o della pagina del passaporto con la foto compiliamo noi i dati: tu controlli.', fotoDoc: 'Foto del documento e selfie', scanLeggo: 'Leggo il documento…', scanOk: 'Dati letti dal documento: controlla e completa.', scanKo: 'Lettura automatica non riuscita: nessun problema, compila i campi qui sotto a mano. La foto è salvata e va bene così.', dataPh: 'gg/mm/aaaa', torna: 'Torna al tracker',
-    errCampi: 'Controlla i campi evidenziati in rosso.', errPrivacy: 'Serve il consenso per procedere.', errRete: 'Invio non riuscito, riprova tra poco.', errCarica: 'Connessione non riuscita: controlla la rete e ricarica la pagina.', fotoKo: 'Non riesco ad aprire questa foto: scattala di nuovo o scegline un\'altra.',
+    errCampi: 'Controlla i campi evidenziati in rosso.', errGruppo: 'In alto scegli se viaggiate come famiglia o come amici / gruppo.', errPrivacy: 'Serve il consenso per procedere.', errRete: 'Invio non riuscito, riprova tra poco.', errCarica: 'Connessione non riuscita: controlla la rete e ricarica la pagina.', fotoKo: 'Non riesco ad aprire questa foto: scattala di nuovo o scegline un\'altra.',
     errLink: 'Questo link non è valido. Contatta l\'host.', foto: 'Scatta o carica', fotoReq: 'Mancano le foto di: {n}. Per ogni ospite servono la foto del documento (anche il retro se è una carta d\'identità) e il selfie con il documento.', prep: 'Tieni a portata di mano i documenti: per ogni ospite servono foto fronte e retro e un selfie con il documento in mano.', bozzaT: 'I dati restano salvati su questo telefono: puoi completare anche più tardi.', selfie: 'Selfie con documento', selfieT: 'Una foto del tuo viso con il documento in mano, accanto al volto e leggibile.', host: 'Compilato dall\'host', modT: 'Stai modificando i dati inviati il {d}. Correggi o aggiungi persone e invia di nuovo: sostituiranno quelli precedenti.', fotoOk: 'Già caricata', inviaMod: 'Invia le modifiche', grazieMod: 'Modifiche ricevute. Grazie!' },
   en: { title: 'Online check-in', sub: 'Italian law (art. 109 TULPS) requires us to register every guest with the police. It takes 3 minutes.',
     arrivo: 'Arrival', partenza: 'Departure', notti: 'nights', ospiti: 'How many guests?', gruppo: 'Travelling as', famiglia: 'Family', gruppoA: 'Friends / group',
@@ -101,7 +102,7 @@ const T = {
     cerca: 'Type and pick from the list', contatto: 'Contact', email: 'Email', tel: 'Phone', facolt: 'optional',
     privacy: 'I consent to the processing of these data for the mandatory notification to the Italian police (art. 109 TULPS). Data are not used for anything else and document photos are deleted within 30 days of departure.',
     invia: 'Send details', invio: 'Sending…', grazie: 'Thank you!', grazieT: 'We have received your details. See you soon!', scan: 'Scan your ID', scanT: 'From the photo of the back of your ID card (<<< lines) or your passport photo page we fill in the details: you just check them.', fotoDoc: 'Document photos and selfie', scanLeggo: 'Reading your document…', scanOk: 'Details read from your document: please check and complete.', scanKo: 'We couldn\'t read it automatically: no problem, just fill in the fields below. Your photo is saved and that\'s fine.', dataPh: 'dd/mm/yyyy', torna: 'Back to tracker',
-    errCampi: 'Please check the fields highlighted in red.', errPrivacy: 'Consent is required to continue.', errRete: 'Sending failed, please try again shortly.', errCarica: 'Connection failed: check your network and reload the page.', fotoKo: 'This photo can\'t be opened: take it again or choose another one.',
+    errCampi: 'Please check the fields highlighted in red.', errGruppo: 'At the top, choose whether you are travelling as a family or as friends / a group.', errPrivacy: 'Consent is required to continue.', errRete: 'Sending failed, please try again shortly.', errCarica: 'Connection failed: check your network and reload the page.', fotoKo: 'This photo can\'t be opened: take it again or choose another one.',
     errLink: 'This link is not valid. Please contact your host.', foto: 'Take or upload', fotoReq: 'Photos missing for: {n}. Every guest needs a photo of their document (also the back for ID cards) and a selfie holding it.', prep: 'Have everyone\'s ID ready: for each guest we need photos of the front and back and a selfie holding it.', bozzaT: 'Your details stay saved on this phone: you can finish later.', selfie: 'Selfie with ID', selfieT: 'A photo of your face holding your ID next to it, clearly readable.', host: 'Filled in by the host', modT: 'You are editing the details sent on {d}. Fix or add guests and send again: they will replace the previous ones.', fotoOk: 'Already uploaded', inviaMod: 'Send changes', grazieMod: 'Changes received. Thank you!' },
   es: { title: 'Check-in online', sub: 'La ley italiana (art. 109 TULPS) nos obliga a registrar a todos los huéspedes ante la policía. Son 3 minutos.',
     arrivo: 'Llegada', partenza: 'Salida', notti: 'noches', ospiti: '¿Cuántos sois?', gruppo: 'Viajáis como', famiglia: 'Familia', gruppoA: 'Amigos / grupo',
@@ -111,7 +112,7 @@ const T = {
     cerca: 'Escribe y elige de la lista', contatto: 'Contacto', email: 'Email', tel: 'Teléfono', facolt: 'opcional',
     privacy: 'Doy mi consentimiento al tratamiento de los datos para la comunicación obligatoria a la policía italiana (art. 109 TULPS). Las fotos de los documentos se borran en 30 días tras la salida.',
     invia: 'Enviar datos', invio: 'Enviando…', grazie: '¡Gracias!', grazieT: 'Hemos recibido vuestros datos. ¡Hasta pronto!', scan: 'Fotografía tu documento', scanT: 'Con la foto del reverso del DNI (líneas <<<) o de la página del pasaporte con la foto rellenamos los datos: tú los compruebas.', fotoDoc: 'Fotos del documento y selfie', scanLeggo: 'Leyendo el documento…', scanOk: 'Datos leídos del documento: compruébalos y completa.', scanKo: 'No pudimos leerlo automáticamente: no pasa nada, rellena los campos de abajo. La foto queda guardada.', dataPh: 'dd/mm/aaaa', torna: 'Volver',
-    errCampi: 'Revisa los campos marcados en rojo.', errPrivacy: 'Se necesita el consentimiento.', errRete: 'Error de envío, inténtalo de nuevo.', errCarica: 'No hay conexión: revisa la red y vuelve a cargar la página.', fotoKo: 'No se puede abrir esta foto: hazla de nuevo o elige otra.',
+    errCampi: 'Revisa los campos marcados en rojo.', errGruppo: 'Arriba elige si viajáis como familia o como amigos / grupo.', errPrivacy: 'Se necesita el consentimiento.', errRete: 'Error de envío, inténtalo de nuevo.', errCarica: 'No hay conexión: revisa la red y vuelve a cargar la página.', fotoKo: 'No se puede abrir esta foto: hazla de nuevo o elige otra.',
     errLink: 'Este enlace no es válido. Contacta con el anfitrión.', foto: 'Hacer o subir', fotoReq: 'Faltan las fotos de: {n}. Cada huésped necesita la foto del documento (también el reverso si es un DNI) y un selfie con el documento.', prep: 'Ten a mano los documentos: de cada huésped necesitamos fotos del anverso y reverso y un selfie con el documento en la mano.', bozzaT: 'Los datos quedan guardados en este teléfono: puedes completarlos más tarde.', selfie: 'Selfie con documento', selfieT: 'Una foto de tu cara con el documento en la mano, junto al rostro y legible.', host: 'Rellenado por el anfitrión', modT: 'Estás modificando los datos enviados el {d}. Corrige o añade personas y envía de nuevo: sustituirán a los anteriores.', fotoOk: 'Ya subida', inviaMod: 'Enviar cambios', grazieMod: 'Cambios recibidos. ¡Gracias!' },
   fr: { title: 'Check-in en ligne', sub: 'La loi italienne (art. 109 TULPS) nous oblige à déclarer chaque voyageur à la police. Cela prend 3 minutes.',
     arrivo: 'Arrivée', partenza: 'Départ', notti: 'nuits', ospiti: 'Combien êtes-vous ?', gruppo: 'Vous voyagez en', famiglia: 'Famille', gruppoA: 'Amis / groupe',
@@ -121,7 +122,7 @@ const T = {
     cerca: 'Tapez et choisissez dans la liste', contatto: 'Contact', email: 'Email', tel: 'Téléphone', facolt: 'facultatif',
     privacy: 'J\'accepte le traitement de ces données pour la déclaration obligatoire à la police italienne (art. 109 TULPS). Les photos des documents sont supprimées dans les 30 jours suivant le départ.',
     invia: 'Envoyer', invio: 'Envoi…', grazie: 'Merci !', grazieT: 'Nous avons bien reçu vos données. À bientôt !', scan: 'Photographiez votre pièce', scanT: 'Avec la photo du verso de la carte d\'identité (lignes <<<) ou de la page photo du passeport, nous remplissons les données : vous vérifiez.', fotoDoc: 'Photos du document et selfie', scanLeggo: 'Lecture du document…', scanOk: 'Données lues sur le document : vérifiez et complétez.', scanKo: 'Lecture automatique impossible : pas de souci, remplissez les champs ci-dessous. La photo est bien enregistrée.', dataPh: 'jj/mm/aaaa', torna: 'Retour',
-    errCampi: 'Vérifiez les champs en rouge.', errPrivacy: 'Le consentement est nécessaire.', errRete: 'Échec de l\'envoi, réessayez.', errCarica: 'Connexion impossible : vérifiez le réseau et rechargez la page.', fotoKo: 'Impossible d\'ouvrir cette photo : reprenez-la ou choisissez-en une autre.',
+    errCampi: 'Vérifiez les champs en rouge.', errGruppo: 'En haut, indiquez si vous voyagez en famille ou entre amis / en groupe.', errPrivacy: 'Le consentement est nécessaire.', errRete: 'Échec de l\'envoi, réessayez.', errCarica: 'Connexion impossible : vérifiez le réseau et rechargez la page.', fotoKo: 'Impossible d\'ouvrir cette photo : reprenez-la ou choisissez-en une autre.',
     errLink: 'Ce lien n\'est pas valide. Contactez votre hôte.', foto: 'Prendre ou charger', fotoReq: 'Photos manquantes pour : {n}. Chaque voyageur doit fournir la photo de sa pièce (aussi le verso pour une carte d\'identité) et un selfie avec la pièce.', prep: 'Gardez les pièces d\'identité à portée de main : pour chaque voyageur, il faut une photo recto et verso et un selfie avec la pièce en main.', bozzaT: 'Vos données restent enregistrées sur ce téléphone : vous pouvez terminer plus tard.', selfie: 'Selfie avec la pièce', selfieT: 'Une photo de votre visage avec la pièce d\'identité à côté, bien lisible.', host: 'Rempli par l\'hôte', modT: 'Vous modifiez les données envoyées le {d}. Corrigez ou ajoutez des personnes puis renvoyez : elles remplaceront les précédentes.', fotoOk: 'Déjà chargée', inviaMod: 'Envoyer les modifications', grazieMod: 'Modifications reçues. Merci !' },
   de: { title: 'Online-Check-in', sub: 'Das italienische Gesetz (Art. 109 TULPS) verlangt, alle Gäste bei der Polizei zu melden. Es dauert 3 Minuten.',
     arrivo: 'Anreise', partenza: 'Abreise', notti: 'Nächte', ospiti: 'Wie viele Personen?', gruppo: 'Sie reisen als', famiglia: 'Familie', gruppoA: 'Freunde / Gruppe',
@@ -131,16 +132,34 @@ const T = {
     cerca: 'Tippen und aus der Liste wählen', contatto: 'Kontakt', email: 'E-Mail', tel: 'Telefon', facolt: 'optional',
     privacy: 'Ich willige in die Verarbeitung dieser Daten für die Pflichtmeldung an die italienische Polizei ein (Art. 109 TULPS). Ausweisfotos werden innerhalb von 30 Tagen nach Abreise gelöscht.',
     invia: 'Daten senden', invio: 'Wird gesendet…', grazie: 'Danke!', grazieT: 'Wir haben Ihre Daten erhalten. Bis bald!', scan: 'Ausweis fotografieren', scanT: 'Aus dem Foto der Ausweisrückseite (<<<-Zeilen) oder der Passseite mit Foto füllen wir die Daten aus: Sie prüfen nur.', fotoDoc: 'Ausweisfotos und Selfie', scanLeggo: 'Dokument wird gelesen…', scanOk: 'Daten aus dem Dokument gelesen: bitte prüfen und ergänzen.', scanKo: 'Automatisches Lesen nicht möglich: kein Problem, füllen Sie die Felder unten aus. Das Foto ist gespeichert.', dataPh: 'tt/mm/jjjj', torna: 'Zurück',
-    errCampi: 'Bitte die rot markierten Felder prüfen.', errPrivacy: 'Die Einwilligung ist erforderlich.', errRete: 'Senden fehlgeschlagen, bitte erneut versuchen.', errCarica: 'Keine Verbindung: Netzwerk prüfen und Seite neu laden.', fotoKo: 'Dieses Foto lässt sich nicht öffnen: bitte neu aufnehmen oder ein anderes wählen.',
+    errCampi: 'Bitte die rot markierten Felder prüfen.', errGruppo: 'Bitte oben wählen, ob Sie als Familie oder als Freunde / Gruppe reisen.', errPrivacy: 'Die Einwilligung ist erforderlich.', errRete: 'Senden fehlgeschlagen, bitte erneut versuchen.', errCarica: 'Keine Verbindung: Netzwerk prüfen und Seite neu laden.', fotoKo: 'Dieses Foto lässt sich nicht öffnen: bitte neu aufnehmen oder ein anderes wählen.',
     errLink: 'Dieser Link ist ungültig. Bitte kontaktieren Sie den Gastgeber.', foto: 'Aufnehmen oder hochladen', fotoReq: 'Es fehlen Fotos von: {n}. Für jeden Gast brauchen wir ein Foto des Dokuments (beim Personalausweis auch die Rückseite) und ein Selfie mit dem Dokument.', prep: 'Halten Sie alle Ausweise bereit: Für jeden Gast brauchen wir Fotos der Vorder- und Rückseite und ein Selfie mit dem Ausweis in der Hand.', bozzaT: 'Ihre Daten bleiben auf diesem Telefon gespeichert: Sie können später fortfahren.', selfie: 'Selfie mit Ausweis', selfieT: 'Ein Foto Ihres Gesichts mit dem Ausweis daneben, gut lesbar.', host: 'Vom Gastgeber ausgefüllt', modT: 'Sie bearbeiten die am {d} gesendeten Daten. Korrigieren oder ergänzen Sie Personen und senden Sie erneut: sie ersetzen die vorherigen.', fotoOk: 'Bereits hochgeladen', inviaMod: 'Änderungen senden', grazieMod: 'Änderungen erhalten. Danke!' },
 };
 // nomi stranieri comuni → nome ufficiale (tabella Polizia, in italiano)
 const ALIAS = { 'GERMANY':'GERMANIA','DEUTSCHLAND':'GERMANIA','FRANCE':'FRANCIA','SPAIN':'SPAGNA','ESPAÑA':'SPAGNA','UNITED KINGDOM':'REGNO UNITO','UK':'REGNO UNITO','GREAT BRITAIN':'REGNO UNITO',
   'UNITED STATES':'STATI UNITI D\'AMERICA','USA':'STATI UNITI D\'AMERICA','NETHERLANDS':'PAESI BASSI','HOLLAND':'PAESI BASSI','BELGIUM':'BELGIO','SWITZERLAND':'SVIZZERA','SCHWEIZ':'SVIZZERA','SUISSE':'SVIZZERA',
   'AUSTRIA':'AUSTRIA','ÖSTERREICH':'AUSTRIA','POLAND':'POLONIA','PORTUGAL':'PORTOGALLO','IRELAND':'IRLANDA','SWEDEN':'SVEZIA','NORWAY':'NORVEGIA','DENMARK':'DANIMARCA','FINLAND':'FINLANDIA',
-  'GREECE':'GRECIA','CZECH REPUBLIC':'REPUBBLICA CECA','CZECHIA':'REPUBBLICA CECA','HUNGARY':'UNGHERIA','ROMANIA':'ROMANIA','CROATIA':'CROAZIA','SLOVENIA':'SLOVENIA','SLOVAKIA':'SLOVACCHIA',
+  'GREECE':'GRECIA','CZECH REPUBLIC':'REPUBBLICA CECA','CZECHIA':'REPUBBLICA CECA','HUNGARY':'UNGHERIA','ROMANIA':'ROMANIA','CROATIA':'CROAZIA','SLOVENIA':'SLOVENIA','SLOVAKIA':'REPUBBLICA SLOVACCA','SLOVACCHIA':'REPUBBLICA SLOVACCA',
   'CANADA':'CANADA','AUSTRALIA':'AUSTRALIA','NEW ZEALAND':'NUOVA ZELANDA','BRAZIL':'BRASILE','BRASIL':'BRASILE','ARGENTINA':'ARGENTINA','MEXICO':'MESSICO','MÉXICO':'MESSICO','JAPAN':'GIAPPONE',
-  'CHINA':'CINA','SOUTH KOREA':'COREA DEL SUD','KOREA':'COREA DEL SUD','INDIA':'INDIA','ISRAEL':'ISRAELE','TURKEY':'TURCHIA','UKRAINE':'UCRAINA','RUSSIA':'RUSSIA','SOUTH AFRICA':'SUD AFRICA','ITALY':'ITALIA' };
+  'CHINA':'CINA','SOUTH KOREA':'COREA DEL SUD','KOREA':'COREA DEL SUD','INDIA':'INDIA','ISRAEL':'ISRAELE','TURKEY':'TURCHIA','UKRAINE':'UCRAINA','RUSSIA':'FEDERAZIONE RUSSA','SOUTH AFRICA':'SUDAFRICA','SUD AFRICA':'SUDAFRICA','ITALY':'ITALIA',
+  'US':'STATI UNITI D\'AMERICA','U S A':'STATI UNITI D\'AMERICA','U S':'STATI UNITI D\'AMERICA','UNITED STATES OF AMERICA':'STATI UNITI D\'AMERICA','AMERICA':'STATI UNITI D\'AMERICA','STATI UNITI':'STATI UNITI D\'AMERICA','ESTADOS UNIDOS':'STATI UNITI D\'AMERICA','ETATS UNIS':'STATI UNITI D\'AMERICA','VEREINIGTE STAATEN':'STATI UNITI D\'AMERICA',
+  'ENGLAND':'REGNO UNITO','SCOTLAND':'REGNO UNITO','WALES':'REGNO UNITO','NORTHERN IRELAND':'REGNO UNITO','BRITAIN':'REGNO UNITO','GB':'REGNO UNITO','INGHILTERRA':'REGNO UNITO','ROYAUME UNI':'REGNO UNITO','REINO UNIDO':'REGNO UNITO','VEREINIGTES KONIGREICH':'REGNO UNITO',
+  'OLANDA':'PAESI BASSI','THE NETHERLANDS':'PAESI BASSI','NEDERLAND':'PAESI BASSI','PAYS BAS':'PAESI BASSI','PAISES BAJOS':'PAESI BASSI','NIEDERLANDE':'PAESI BASSI',
+  'FRANKREICH':'FRANCIA','SPANIEN':'SPAGNA','ESPAGNE':'SPAGNA','ALLEMAGNE':'GERMANIA','ALEMANIA':'GERMANIA','BELGIQUE':'BELGIO','BELGIE':'BELGIO','BELGIEN':'BELGIO','ITALIEN':'ITALIA','ITALIE':'ITALIA',
+  'SCHWEDEN':'SVEZIA','NORWEGEN':'NORVEGIA','DANEMARK':'DANIMARCA','POLEN':'POLONIA','POLOGNE':'POLONIA','IRLAND':'IRLANDA','IRLANDE':'IRLANDA','OSTERREICH':'AUSTRIA','AUTRICHE':'AUSTRIA',
+  'CZECH':'REPUBBLICA CECA','TSCHECHIEN':'REPUBBLICA CECA','SERBIA':'SERBIA','NORTH MACEDONIA':'MACEDONIA DEL NORD','BOSNIA':'BOSNIA ED ERZEGOVINA','MOLDOVA':'MOLDAVIA','LUXEMBOURG':'LUSSEMBURGO','ICELAND':'ISLANDA',
+  'ESTONIA':'ESTONIA','LATVIA':'LETTONIA','LITHUANIA':'LITUANIA','PHILIPPINES':'FILIPPINE','THAILAND':'THAILANDIA','UAE':'EMIRATI ARABI UNITI','UNITED ARAB EMIRATES':'EMIRATI ARABI UNITI','SAUDI ARABIA':'ARABIA SAUDITA',
+  'EGYPT':'EGITTO','MOROCCO':'MAROCCO','TUNISIA':'TUNISIA','JORDAN':'GIORDANIA','LEBANON':'LIBANO','PERU':'PERU\'','CHILE':'CILE','COLOMBIA':'COLOMBIA','SRI LANKA':'SRI LANKA (CEYLON)','HONG KONG':'HONG KONG' };
+// nome del Paese scritto dall'ospite → nome della lista ufficiale (senza accenti/punteggiatura, alias in più lingue, inizio univoco)
+const normP = x => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[.'’`,()-]/g, ' ').replace(/^THE\s+/, '').replace(/\s+/g, ' ').trim();
+function statoCod(txt) {
+  const T = S.tab, n = normP(txt);
+  if (!n) return undefined;
+  if (T.statiN.has(n)) return T.statiN.get(n);
+  const pre = [...T.statiN.keys()].filter(k => n.length >= 4 && k.startsWith(n));
+  const cod = new Set(pre.map(k => T.statiN.get(k)));
+  return cod.size === 1 ? [...cod][0] : undefined;
+}
 
 // ===================== Stato =====================
 const qs = new URLSearchParams(location.search);
@@ -255,10 +274,11 @@ function indicizza(tab) {
   const stati = new Map(), comuni = new Map();
   tab.stati.forEach(([c, n]) => stati.set(n.toUpperCase(), c));
   Object.entries(ALIAS).forEach(([a, n]) => { if (stati.has(n) && !stati.has(a)) stati.set(a, stati.get(n)); });
+  const statiN = new Map(); stati.forEach((c, k) => { const z = normP(k); if (!statiN.has(z)) statiN.set(z, c); });
   tab.comuni.forEach(([c, n, p]) => comuni.set(`${n} (${p})`.toUpperCase(), { c, p }));
   const nomeStato = new Map(tab.stati.map(([c, n]) => [c, n]));
   const comuneDa = new Map(tab.comuni.map(([c, n, p]) => [c, `${n} (${p})`]));
-  return { stati, comuni, nomeStato, comuneDa, documenti: tab.documenti };
+  return { stati, statiN, comuni, nomeStato, comuneDa, documenti: tab.documenti };
 }
 function riempiListe() {
   $('#dl-stati').innerHTML = [...S.tab.stati.keys()].sort().map(n => `<option value="${esc(n)}">`).join('');
@@ -280,7 +300,7 @@ function render() {
     </section>
     <h2>${t('ospiti')}</h2>
     <div class="card"><div class="count"><button type="button" aria-label="−" onclick="setN(S.n-1)">−</button><b>${S.n}</b><button type="button" aria-label="+" onclick="setN(S.n+1)">+</button></div>
-      ${S.n > 1 ? `<label>${t('gruppo')}</label><div class="seg">${segBtn('famiglia', t('famiglia'))}${segBtn('gruppo', t('gruppoA'))}</div>` : ''}</div>
+      ${S.n > 1 ? `<label>${t('gruppo')}</label><div class="seg" id="gruppo">${segBtn('famiglia', t('famiglia'))}${segBtn('gruppo', t('gruppoA'))}</div>` : ''}</div>
     ${S.ospiti.map(cardOspite).join('')}
     <label class="check"><input type="checkbox" id="privacy" ${S.privacy ? 'checked' : ''}> <span>${t('privacy')}</span></label>
     ${S.err ? `<div class="err" role="alert">${esc(S.err)}</div>` : ''}
@@ -301,8 +321,8 @@ function setN(n) { salva(); n = Math.min(Math.max(n, 1), MAX_OSPITI); while (S.o
 
 function cardOspite(o, i) {
   const capo = i === 0, f = (k, l, type = 'text', extra = '') => `<label for="${k}${i}">${l}</label><input id="${k}${i}" type="${type}" value="${esc(o[k])}" ${extra}>`;
-  const ita = (S.tab.stati.get((o.statoTxt || '').toUpperCase()) === ITALIA);
-  const docIta = (S.tab.stati.get((o.docPaeseTxt || '').toUpperCase()) === ITALIA);
+  const ita = (statoCod(o.statoTxt) === ITALIA);
+  const docIta = (statoCod(o.docPaeseTxt) === ITALIA);
   return `<div class="card" data-i="${i}"><h3><span class="n">${i + 1}</span>${capo ? t('tu') : t('ospite') + ' ' + (i + 1)}</h3>
     <div class="scan"><label style="margin-top:0">${t('fotoDoc')}</label>
       <div class="photos">${ph(i, 0, t('fronte'))}${ph(i, 1, t('retro'))}${ph(i, 2, t('selfie'), 'wide')}</div>
@@ -507,13 +527,13 @@ async function invia() {
   const bad = [];
   const mark = id => bad.push(id);
   const ospiti = S.ospiti.map((o, i) => {
-    const sN = S.tab.stati.get(o.statoTxt.toUpperCase()), cit = S.tab.stati.get(o.cittTxt.toUpperCase());
+    const sN = statoCod(o.statoTxt), cit = statoCod(o.cittTxt);
     const com = S.tab.comuni.get(o.comuneTxt.toUpperCase());
     const out = { cognome: o.cognome, nome: o.nome, sesso: o.sesso, nascita: o.nascita, statoNascita: sN || '', cittadinanza: cit || '', comuneNascita: com ? com.c : '', provNascita: com ? com.p : '', foto: o.foto.filter(Boolean) };
     if (!o.nome) mark('nome' + i); if (!o.cognome) mark('cognome' + i); if (!o.sesso) mark('sesso' + i); if (!o.nascita) mark('nascita' + i);
     if (!sN) mark('statoTxt' + i); if (!cit) mark('cittTxt' + i); if (sN === ITALIA && !com) mark('comuneTxt' + i);
     if (i === 0) {
-      const dp = S.tab.stati.get(o.docPaeseTxt.toUpperCase()), dc = S.tab.comuni.get(o.docComuneTxt.toUpperCase());
+      const dp = statoCod(o.docPaeseTxt), dc = S.tab.comuni.get(o.docComuneTxt.toUpperCase());
       out.docTipo = o.docTipo; out.docNumero = o.docNumero; out.docLuogo = dp === ITALIA ? (dc ? dc.c : '') : (dp || '');
       if (!o.docTipo) mark('docTipo0'); if (!o.docNumero) mark('docNumero0'); if (!dp) mark('docPaeseTxt0'); if (dp === ITALIA && !dc) mark('docComuneTxt0');
     }
@@ -527,13 +547,13 @@ async function invia() {
   const senzaFoto = S.ospiti.map((o, i) => !tieni(o) && obbl(o, i).some(j => !o.foto[j]) ? i : -1).filter(i => i >= 0);
   const fotoMancanti = senzaFoto.length > 0;
   if (!S.pren.partenza && !S.partenza) mark('partenza');
-  if (S.n > 1 && !S.gruppo) { S.err = t('errCampi'); }
-  if (bad.length) S.err = t('errCampi');
+  if (S.n > 1 && !S.gruppo) mark('gruppo');
+  if (bad.length) S.err = bad.length === 1 && bad[0] === 'gruppo' ? t('errGruppo') : t('errCampi');
   else if (fotoMancanti) S.err = t('fotoReq').replace('{n}', senzaFoto.map(i => (S.ospiti[i].nome + ' ' + S.ospiti[i].cognome).trim() || t('ospite') + ' ' + (i + 1)).join(', '));
   else if (!S.privacy) S.err = t('errPrivacy');
   if (S.err) {
     render();
-    bad.forEach(id => { const el = document.getElementById(id); if (el) el.setAttribute('aria-invalid', 'true'); });
+    bad.forEach(id => { const el = document.getElementById(id); if (el) { el.setAttribute('aria-invalid', 'true'); if (id === 'gruppo') el.classList.add('bad'); } });
     if (fotoMancanti && !bad.length) senzaFoto.forEach(i => obbl(S.ospiti[i], i).forEach(j => { const el = document.getElementById('ph' + i + '_' + j); if (el && !S.ospiti[i].foto[j]) el.classList.add('bad'); }));
     (document.querySelector('[aria-invalid=true]') || document.querySelector('.ph.bad') || document.querySelector('.err')).scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
