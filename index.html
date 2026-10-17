@@ -40,12 +40,18 @@ h2{margin:0;font-size:17px;font-weight:700}
 .row{display:flex;align-items:center;gap:12px}
 .between{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .card{background:var(--card);border-radius:var(--r-lg);padding:18px}
+.ckstr{display:flex;align-items:center;gap:8px;width:100%;margin-top:12px;padding:10px 8px 10px 12px;border:0;border-radius:16px;background:var(--card);color:var(--ink);font:inherit;font-size:14px;text-align:left}
+.ckstr.urg{box-shadow:inset 0 0 0 2px var(--red)}
+.ckchips{flex:1;min-width:0;display:flex;gap:4px;justify-content:flex-end}
+.ckchip{white-space:nowrap;font-size:12px;font-weight:700;padding:4px 7px;border-radius:99px}
+.ckchip.a{background:var(--amber-t);color:var(--amber-d)}.ckchip.r{background:var(--red-t);color:var(--red-d)}
+.ckchip.g{background:#EEF0EC;color:#4A5157}.ckchip.v{background:var(--green-t);color:var(--green-d)}
 .stack{display:flex;flex-direction:column;gap:12px}
 .mt{margin-top:12px}.mt2{margin-top:22px}
 
 /* header + periodo */
 .top{padding:22px 0 14px;display:flex;flex-direction:column;gap:12px}
-.brand{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.brand{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .period{display:flex;gap:8px;align-items:center}
 .period select{appearance:none;-webkit-appearance:none;height:44px;border-radius:14px;border:1px solid #D9DCD6;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23121A21' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;padding:0 34px 0 14px;font-weight:700;font-size:15px}
 .iconbtn{width:44px;height:44px;border-radius:14px;border:1px solid #D9DCD6;background:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -143,6 +149,8 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 .sheet{background:var(--ground);width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(24px + var(--safe-b));animation:up .22s ease-out}
 .overlay.full{align-items:stretch;background:var(--ground)}.overlay.full .sheet{max-height:none;height:100%;max-width:640px;border-radius:0;padding-top:calc(env(safe-area-inset-top) + 14px);-webkit-overflow-scrolling:touch}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes gira{to{transform:rotate(360deg)}}
+.syncing [aria-label="Aggiorna dati"] svg{animation:gira .9s linear infinite}
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
 .field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
 .field input,.field select,.field textarea{height:50px;border-radius:14px;border:1px solid #D9DCD6;background:#fff;padding:0 14px;font-size:15px;font-weight:600;color:var(--ink);width:100%}
@@ -191,6 +199,7 @@ const SUPABASE_URL = 'https://tgswoagxubpglnirsuxi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uwFBcSGHc5PSQp-Ma2nO5w_1BjhAZ4Z';   // chiave pubblica: i dati restano protetti dal PIN
 const LOGIN_EMAIL  = 'antrumloft@gmail.com';
 const CHECKIN_URL = 'https://enricode89.github.io/tracker-antrum/checkin/';
+const SCRIPT_API = 'https://script.google.com/macros/s/AKfycbzVWh2PXMxgYzvhUqaHPVS4WTJLdnAr0ra7VG5tqVt6G8WopIbYezJMnJqeHqwLkRaq9g/exec';
 const PIN_LEN = 6;
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
@@ -501,7 +510,20 @@ function viewBilancio() {
 }
 
 // Home: calendario + check-in degli ospiti
-function viewHome() { return viewCal('Home') + avvisoValidare() + ckContenuto(); }
+// Home: sotto il titolo una sola riga con la situazione dei check-in; la lista completa si apre toccandola
+function viewHome() {
+  const c = viewCal('Home'), i = c.indexOf('</header>');
+  return i < 0 ? ckStriscia() + c + avvisoValidare() : c.slice(0, i + 9) + ckStriscia() + c.slice(i + 9) + avvisoValidare();
+}
+function ckStriscia() {
+  const all = ckLista(), n = s => all.filter(b => ckStato(b) === s).length;
+  const inv = n('ricevuto'), att = n('attesa'), ok = n('inviato'), urg = all.filter(b => ckStato(b) === 'ricevuto' && ckUrgenza(b)).length;
+  const chip = (v, l, cls) => v ? `<span class="ckchip ${cls}">${v} ${l}</span>` : '';
+  const parti = chip(inv, 'da inviare', urg ? 'r' : 'a') + chip(att, 'in attesa', 'g') + chip(ok, ok === 1 ? 'inviato' : 'inviati', 'v');
+  return `<button class="ckstr${urg ? ' urg' : ''}" onclick="apriCk()" aria-label="Check-in ospiti: ${inv} da inviare, ${att} in attesa, ${ok} inviati">
+    <b>Check-in</b><span class="ckchips">${parti || '<span class="ckchip v">tutto in ordine ✓</span>'}</span>${ic('right', 18)}</button>`;
+}
+function apriCk(f) { if (f) S.ckFilter = f; sheet(sheetHead('Check-in ospiti') + ckContenuto(), true); }
 function avvisoValidare() {
   const v = daValidare();
   if (!v.length) return '';
@@ -744,9 +766,9 @@ function viewCal(titolo = 'Calendario') {
     if (!dentro && !esce) det += `<div class="item"><span class="dot" style="background:#E3E5E0"></span><div style="flex:1"><div class="s" style="font-weight:700;text-transform:none">${PROP[p]}</div><div class="t">Libero</div></div></div>`;
   });
   return `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${titolo}</h1></div>
-    <div class="row" style="gap:4px"><button class="iconbtn" style="border:0;background:none" aria-label="Mese precedente" onclick="shiftMonth(-1)">${ic('left', 18)}</button>
-    <b style="font-size:15px;min-width:110px;text-align:center">${MESI[m]} ${y}</b>
-    <button class="iconbtn" style="border:0;background:none" aria-label="Mese successivo" onclick="shiftMonth(1)">${ic('right', 18)}</button></div></div>
+    <div class="row" style="gap:2px">${titolo === 'Home' ? `<button class="iconbtn" style="margin-right:2px" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button>` : ''}<button class="iconbtn" style="border:0;background:none;width:34px" aria-label="Mese precedente" onclick="shiftMonth(-1)">${ic('left', 18)}</button>
+    <b style="font-size:15px;min-width:${titolo === 'Home' ? 0 : 110}px;text-align:center;white-space:nowrap">${titolo === 'Home' ? MESI[m].slice(0, 3) : MESI[m]} ${y}</b>
+    <button class="iconbtn" style="border:0;background:none;width:34px" aria-label="Mese successivo" onclick="shiftMonth(1)">${ic('right', 18)}</button></div></div>
     <div class="seg">${seg('entrambe', 'Entrambe')}${seg('loft', 'Loft')}${seg('suite', 'Suite')}</div></header>
     <section class="cal"><div class="dow"><span>LUN</span><span>MAR</span><span>MER</span><span>GIO</span><span>VEN</span><span>SAB</span><span>DOM</span></div>
     <div class="grid">${cells}</div>
@@ -1103,7 +1125,7 @@ function ckContenuto() {
   const inv = all.filter(b => ckStato(b) === 'ricevuto').sort((a, b) => a.checkin.localeCompare(b.checkin));
   const att = all.filter(b => ckStato(b) === 'attesa').sort((a, b) => a.checkin.localeCompare(b.checkin));
   const ok = all.filter(b => ckStato(b) === 'inviato').sort((a, b) => b.checkin.localeCompare(a.checkin));
-  const box = (k, n, l, bg, fg) => `<button class="card" aria-pressed="${f === k}" onclick="S.ckFilter='${k}';render()" style="padding:12px 14px;text-align:left;border:0;background:${bg};color:${fg};${f === k ? 'box-shadow:inset 0 0 0 2px ' + fg : ''}"><div style="font-size:24px;font-weight:800">${n}</div><div class="small" style="font-weight:700">${l}</div></button>`;
+  const box = (k, n, l, bg, fg) => `<button class="card" aria-pressed="${f === k}" onclick="apriCk('${k}')" style="padding:12px 14px;text-align:left;border:0;background:${bg};color:${fg};${f === k ? 'box-shadow:inset 0 0 0 2px ' + fg : ''}"><div style="font-size:24px;font-weight:800">${n}</div><div class="small" style="font-weight:700">${l}</div></button>`;
   const card = b => {
     const d = parse(b.checkin), st = ckStato(b), n = b.checkout ? diffDays(b.checkin, b.checkout) : 0;
     return `<div class="card stack" style="padding:12px;gap:10px">
@@ -1118,10 +1140,9 @@ function ckContenuto() {
       ${st === 'inviato' ? `<div class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</div>` : ''}</div>`;
   };
   const sez = (t, l, vuoto) => `<h2 style="font-size:15px;margin:18px 4px 8px">${t}</h2><div class="stack" style="gap:8px">${l.length ? l.map(card).join('') : `<div class="empty">${vuoto}</div>`}</div>`;
-  let html = `<section class="mt2"><div class="between" style="margin:0 4px 10px"><h2 style="font-size:20px">Check-in ospiti</h2><span class="small muted">Questura</span></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${box('dafare', inv.length + att.length, 'Da fare', 'var(--amber-t)', 'var(--amber-d)')}${box('inviati', ok.length, 'Inviati', 'var(--green-t)', 'var(--green-d)')}${box('tutti', all.length, 'Tutti', '#fff', 'var(--ink)')}</div>`;
+  let html = `<section><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${box('dafare', inv.length + att.length, 'Da fare', 'var(--amber-t)', 'var(--amber-d)')}${box('inviati', ok.length, 'Inviati', 'var(--green-t)', 'var(--green-d)')}${box('tutti', all.length, 'Tutti', '#fff', 'var(--ink)')}</div>`;
   const urg = inv.filter(b => ckUrgenza(b));
-  if (urg.length) html += `<button class="alert mt" style="background:var(--red-t);color:var(--red-d)" onclick="S.ckFilter='dafare';render()">${ic('alert')}<span style="flex:1"><b>${urg.length} check-in ${urg.length > 1 ? 'compilati' : 'compilato'}, non ancora ${urg.length > 1 ? 'inviati' : 'inviato'} in Questura</b> · ${urg.some(b => ckUrgenza(b) === 'ritardo') ? 'uno è oltre le 24 ore' : 'da inviare entro 24 ore dall\'arrivo'}</span><b>Vedi</b></button>`;
+  if (urg.length) html += `<button class="alert mt" style="background:var(--red-t);color:var(--red-d)" onclick="apriCk('dafare')">${ic('alert')}<span style="flex:1"><b>${urg.length} check-in ${urg.length > 1 ? 'compilati' : 'compilato'}, non ancora ${urg.length > 1 ? 'inviati' : 'inviato'} in Questura</b> · ${urg.some(b => ckUrgenza(b) === 'ritardo') ? 'uno è oltre le 24 ore' : 'da inviare entro 24 ore dall\'arrivo'}</span><b>Vedi</b></button>`;
   if (f === 'dafare') html += sez('Da inviare alla Questura', inv, 'Niente da inviare') + sez('In attesa dei dati dell\'ospite', att, 'Tutti gli ospiti hanno compilato');
   else if (f === 'inviati') html += sez('Inviati in Questura', ok, 'Nessun invio negli ultimi 30 giorni');
   else html += sez('Tutte le prenotazioni', [...all].sort((a, b) => a.checkin.localeCompare(b.checkin)), 'Nessuna prenotazione in arrivo');
@@ -1331,7 +1352,24 @@ function render() {
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
-async function refresh() { try { await loadData(); render(); toast('Dati aggiornati'); } catch (e) { toast('Errore: ' + e.message); } }
+// ↻: dati dell'app subito + controllo immediato delle mail Airbnb/Booking sul server (senza aspettare i 5 minuti)
+let SYNC_IN_CORSO = false;
+async function refresh() {
+  if (SYNC_IN_CORSO) return;
+  SYNC_IN_CORSO = true; document.body.classList.add('syncing');
+  const prima = new Set(S.data.bookings.map(b => b.id));
+  try { await loadData(); render(); } catch (e) {}
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch(SCRIPT_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ azione: 'sync', token: data && data.session ? data.session.access_token : '' }) }).then(x => x.json());
+    if (!r.ok) throw new Error(r.errore || 'controllo non riuscito');
+    await loadData(); render();
+    const nuove = S.data.bookings.filter(b => !prima.has(b.id)).length;
+    toast(nuove ? `${nuove} ${nuove === 1 ? 'nuova prenotazione' : 'nuove prenotazioni'}` : 'Mail controllate · tutto aggiornato');
+  } catch (e) { toast('Dati aggiornati · controllo mail non riuscito, riprova'); }
+  finally { SYNC_IN_CORSO = false; document.body.classList.remove('syncing'); }
+}
 
 let pin = '';
 function loginView(msg = '') {
