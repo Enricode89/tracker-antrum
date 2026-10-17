@@ -1,6 +1,6 @@
 // Service worker: l'app si apre subito dalla copia sul telefono e si aggiorna in sottofondo.
 // I dati arrivano sempre da Supabase (la pagina ne tiene l'ultima copia per l'avvio).
-const CACHE = 'antrum-v25';
+const CACHE = 'antrum-v26';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 // libreria del database: versione fissa, si scarica una volta sola e resta sul telefono
 const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js';

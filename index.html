@@ -532,7 +532,7 @@ function apriCk(f) {
 function sinfRiga() {
   const s = S.sinf && S.sinf.d, d = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '—';
   const ieri = addDays(todayIso(), -1), ok = s && ['loft', 'suite'].every(k => s[k] && s[k] >= ieri);
-  const bg = ok ? 'var(--green-t)' : '#EEF0EC', fg = ok ? 'var(--green-d)' : 'var(--muted)';   // si aggiorna all'invio in Questura: senza ospiti resta indietro ed è normale
+  const bg = !s ? '#EEF0EC' : ok ? 'var(--green-t)' : 'var(--amber-t)', fg = !s ? 'var(--muted)' : ok ? 'var(--green-d)' : 'var(--amber-d)';   // ogni notte va in pari: gialla = ferma per un check-in mancante
   return `<div id="sinfst" class="small" style="margin:18px 0 4px;padding:10px 12px;border-radius:12px;background:${bg};color:${fg};font-weight:700">Sinfonia ISTAT · ${s ? `Loft al ${d(s.loft)} · Suite al ${d(s.suite)}${ok ? ' ✓' : ''}` : 'carico…'}</div>`;
 }
 async function caricaSinfonia() {
