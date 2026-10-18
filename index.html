@@ -723,7 +723,9 @@ function movements(r) {
     out.push({ d: x.date, kind: 'out', x, t: c.l, s: `${x.property === 'entrambe' ? 'Loft + Suite' : PROP[x.property]}${x.note ? ' · ' + esc(x.note) : ''}`, a: +x.amount, color: c.fg }); });
   fixedOccurrences(r).forEach(f => out.push({ d: f.date, kind: 'out', f, t: f.name, s: PROP[f.property], a: +f.amount, color: '#5B3FA0', auto: 'FISSA' }));
   if (S.mode === 'anno') S.data.adj.filter(a => inR(a.date, r)).forEach(a => out.push({ d: a.date, kind: a.amount >= 0 ? 'in' : 'out', t: 'Allineamento Airbnb', s: `${PROP[a.property]} · ${esc(a.note || '')}`, a: Math.abs(+a.amount), color: '#9AA3AD' }));
-  return out.sort((a, b) => b.d.localeCompare(a.d));
+  // giorno più recente in alto; nello stesso giorno le spese inserite a mano per prime, l'ultima inserita in cima
+  const ins = x => x.x ? Date.parse(x.x.created_at) || 1 : 0;
+  return out.sort((a, b) => b.d.localeCompare(a.d) || ins(b) - ins(a));
 }
 
 function viewMov() {
