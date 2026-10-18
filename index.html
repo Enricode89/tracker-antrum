@@ -117,7 +117,9 @@ h2{margin:0;font-size:17px;font-weight:700}
 .paybtn{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px;border-radius:999px;border:0;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
 .paybtn.ok{background:var(--green)} .paybtn.no{background:var(--red)}
 .flags{display:flex;gap:8px}.flags .paybtn{flex:1;justify-content:center;padding:0 10px}
-.sbox{border-radius:18px;padding:12px 16px}.sbox .v{font-size:24px;font-weight:800}.sbox.due{background:var(--red-t);color:var(--red-d)}.sbox.ok{background:var(--green-t);color:var(--green-d)}
+.sbox{border-radius:18px;padding:12px 16px}
+.pulsit{display:block;width:100%;border:0;background:none;padding:0;margin-top:14px;text-align:left;font:inherit;color:inherit}
+.pbar{display:flex;height:8px;border-radius:99px;background:#EEF0EC;overflow:hidden;margin:8px 0 2px}.sbox .v{font-size:24px;font-weight:800}.sbox.due{background:var(--red-t);color:var(--red-d)}.sbox.ok{background:var(--green-t);color:var(--green-d)}
 .app::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-t);background:var(--ground);z-index:30}
 .prev{font-size:12px;font-weight:700;color:var(--muted);background:#ECEDEA;padding:8px 12px;border-radius:999px}
 
@@ -826,7 +828,7 @@ function viewPul() {
   const chip = (k, l) => `<button class="chip" aria-pressed="${S.pulFilter === k}" onclick="S.pulFilter='${k}';render()">${l}</button>`;
   const flag = (b, key, label, cost) => `<button class="paybtn ${b[key] ? 'ok' : 'no'}" aria-label="${label} ${b[key] ? 'pagata' : 'da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}','${key}')">${ic(b[key] ? 'check' : 'x', 15, 3)}${label} ${eur0(cost(b))}</button>`;
   const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
-  return header('Pulizie') + pushCard() + box('Pulizie', 'cleaning_paid', pul) + box('Biancheria', 'linen_paid', lin) + `
+  return header('Pulizie') + pushCard() + pulSituazione() + `
     <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
     <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
     <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
@@ -838,6 +840,44 @@ function viewPul() {
       </div>`; }).join('') : `<div class="empty">Nessun check-out in ${periodName()}</div>`}</div>
     ${dueP ? `<button class="btn green mt" onclick="payAll('cleaning_paid')">${ic('check', 18, 2.6)} Segna tutte le pulizie pagate (${dueP})</button>` : ''}
     ${dueL ? `<button class="btn green mt" onclick="payAll('linen_paid')">${ic('check', 18, 2.6)} Segna tutta la biancheria pagata (${dueL})</button>` : ''}`;
+}
+// In alto: quanto resta da pagare in TUTTO (tutti i mesi), diviso pulizie / biancheria. Toccandolo: andamento mese per mese.
+const PUL_DAL = '2025-09-01';   // storico pulizie/biancheria considerato da settembre 2025 (scelta di Enrico)
+function pulFatte() { return S.data.bookings.filter(b => b.status === 'confermata' && b.checkout && b.checkout >= PUL_DAL && b.checkout <= todayIso()); }
+function pulSituazione() {
+  const done = pulFatte(), dP = done.filter(b => !b.cleaning_paid), dL = done.filter(b => !b.linen_paid);
+  const sP = dP.reduce((s, b) => s + pul(b), 0), sL = dL.reduce((s, b) => s + lin(b), 0);
+  const tile = (t, n, v) => `<div class="sbox ${n ? 'due' : 'ok'}"><div class="small" style="font-weight:700">${t}</div><div class="v">${n ? eur0(v) : '✓'}</div><div class="small" style="font-weight:600">${n ? n + (n === 1 ? ' check-out' : ' check-out') + ' da pagare' : 'tutto pagato'}</div></div>`;
+  return `<button class="pulsit" onclick="apriAndamentoPul()" aria-label="Ancora da pagare: pulizie ${eur0(sP)}, biancheria ${eur0(sL)}. Tocca per l'andamento mese per mese">
+    <div class="between" style="margin:0 4px 8px"><b style="font-size:15px">Ancora da pagare</b><span class="small muted" style="font-weight:700">Andamento ${ic('right', 14)}</span></div>
+    <div class="grid2">${tile('Pulizie', dP.length, sP)}${tile('Biancheria', dL.length, sL)}</div></button>`;
+}
+function apriAndamentoPul() {
+  const done = pulFatte(), mesi = {}, anni = {};
+  done.forEach(b => {
+    const k = b.checkout.slice(0, 7), m = mesi[k] || (mesi[k] = { n: 0, pP: 0, pD: 0, lP: 0, lD: 0 });
+    m.n++; if (b.cleaning_paid) m.pP += pul(b); else m.pD += pul(b); if (b.linen_paid) m.lP += lin(b); else m.lD += lin(b);
+    const a = anni[k.slice(0, 4)] || (anni[k.slice(0, 4)] = { p: 0, d: 0 }); a.p += (b.cleaning_paid ? pul(b) : 0) + (b.linen_paid ? lin(b) : 0); a.d += (b.cleaning_paid ? 0 : pul(b)) + (b.linen_paid ? 0 : lin(b));
+  });
+  const keys = Object.keys(mesi).sort().reverse(), max = Math.max(1, ...keys.map(k => { const m = mesi[k]; return m.pP + m.pD + m.lP + m.lD; }));
+  const riga = (t, p, d) => `<div class="between small" style="margin-top:4px"><span class="muted">${t}</span><span>${eur0(p)} pagati${d ? ` · <b style="color:var(--red-d)">${eur0(d)} da pagare</b>` : ''}</span></div>`;
+  const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
+  const html = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${Object.keys(anni).sort().reverse().map(y => `<div class="sbox ok" style="flex:1;min-width:140px"><div class="small" style="font-weight:700">${y} · pagati</div><div class="v" style="font-size:20px">${eur0(anni[y].p)}</div>${anni[y].d ? `<div class="small" style="color:var(--red-d);font-weight:700">${eur0(anni[y].d)} da pagare</div>` : ''}</div>`).join('')}</div>
+    ${dueP ? `<button class="btn green" onclick="payAllTutto('cleaning_paid')">${ic('check', 18, 2.6)} Segna pagate tutte le pulizie (${dueP})</button>` : ''}
+    ${dueL ? `<button class="btn green mt" onclick="payAllTutto('linen_paid')">${ic('check', 18, 2.6)} Segna pagata tutta la biancheria (${dueL})</button>` : ''}
+    <div class="stack mt" style="gap:8px">${keys.map(k => { const m = mesi[k], p = m.pP + m.lP, d = m.pD + m.lD, [y, mm] = k.split('-');
+      return `<div class="card" style="padding:12px 14px"><div class="between"><b>${MESI[+mm - 1]} ${y}</b><span class="small muted">${m.n} check-out · ${eur0(p + d)}</span></div>
+        <div class="pbar"><span style="width:${p / max * 100}%;background:var(--green)"></span><span style="width:${d / max * 100}%;background:var(--red)"></span></div>
+        ${riga('Pulizie', m.pP, m.pD)}${riga('Biancheria', m.lP, m.lD)}</div>`; }).join('') || '<div class="empty">Nessun check-out ancora</div>'}</div>`;
+  sheet(sheetHead('Pulizie e biancheria') + html, true);
+}
+async function payAllTutto(key) {
+  const ids = pulFatte().filter(b => !b[key]).map(b => b.id);
+  if (!ids.length) return;
+  const { error } = await sb.from('bookings').update({ [key]: true }).in('id', ids);
+  if (error) return toast('Non salvato: ' + error.message);
+  S.data.bookings.forEach(b => { if (ids.includes(b.id)) b[key] = true; });
+  toast(ids.length + (key === 'linen_paid' ? ' biancherie' : ' pulizie') + ' segnate come pagate'); render(); apriAndamentoPul();
 }
 async function togglePaid(id, key) {
   const b = S.data.bookings.find(x => x.id === id); const v = !b[key];
