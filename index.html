@@ -1331,11 +1331,25 @@ function drawNuovo() {
     ${sp ? `<div class="grid2"><label class="field">Data<input id="f_date" type="date" value="${v.date}"></label><label class="field">Nota<input id="f_note" value="${esc(v.note)}" placeholder="facoltativa"></label></div>
       <label class="check"><input type="checkbox" id="f_rep"><span style="flex:1">Ripeti ogni mese<br><span class="small muted" style="font-weight:500">La salva tra le spese fisse</span></span></label>`
     : `<div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${v.cin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${v.cout}"></label></div>
-      <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(v.name)}"></label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${esc(v.guests)}"></label></div>
+      <div class="grid2"><label class="field">Nome ospite *<input id="f_name" value="${esc(v.name)}" placeholder="Nome e cognome" autocomplete="off"></label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${esc(v.guests)}"></label></div>
       <label class="field">Telefono ospite <span class="muted" style="font-weight:500">(per mandargli il link check-in su WhatsApp)</span><input id="f_tel" type="tel" inputmode="tel" placeholder="+39 …" value="${esc(v.tel)}"></label>`}
+    <div id="f_occ"></div>
     <button class="btn" style="background:${acc}" onclick="saveNuovo()">Salva</button></div>`);
 }
 function pickCat(k) { N.cat = k; drawNuovo(); }
+// date già prese: niente salvataggio, riquadro con i dati della prenotazione esistente
+function mostraOccupata(b) {
+  const n = diffDays(b.checkin, b.checkout), el = $('#f_occ');
+  const riga = (k, v) => v ? `<div class="between"><span>${k}</span><b style="text-align:right">${v}</b></div>` : '';
+  el.innerHTML = `<div role="alert" style="background:var(--red-t);color:var(--red-d);border-radius:16px;padding:14px 16px;display:grid;gap:6px;font-size:14px">
+    <b style="font-size:16px">Prenotazione già effettuata</b>
+    <span class="small" style="font-weight:600">Le date scelte sono già occupate: la nuova prenotazione non è stata salvata.</span>
+    ${riga('Ospite', esc(b.guest_name || 'Ospite'))}${riga('Struttura', PROP[b.property] || '')}${riga('Canale', isManual(b) ? 'Manuale · ' + (CANALE[b.source] || b.source) : CANALE[b.source] || b.source)}
+    ${riga('Date', `${dLabel(b.checkin)} → ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}`)}${riga('Ospiti', b.guests || b.checkin_guests || '')}
+    ${riga('Codice', esc(b.code || ''))}${riga('Importo', importo(b) != null ? eur(importo(b)) : '')}
+    <button class="btn" style="background:#fff;color:var(--red-d);height:42px;font-size:14px;margin-top:4px" onclick="closeSheet();openBooking('${b.id}')">Apri la prenotazione</button></div>`;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 async function saveNuovo() {
   const amount = num($('#f_amt').value);
   if (!amount) return toast('Inserisci un importo');
@@ -1357,12 +1371,16 @@ async function saveNuovo() {
   }
   const cin = $('#f_in').value, cout = $('#f_out').value;
   if (!cout || cout <= cin) return toast('Inserisci un check-out dopo il check-in');
+  if (!$('#f_name').value.trim()) { $('#f_name').focus(); return toast('Inserisci il nome dell\'ospite'); }
+  // date già occupate nella stessa struttura (Airbnb, Booking o diretta): non si salva
+  const occ = S.data.bookings.find(b => b.status === 'confermata' && b.property === N.prop && b.checkout && b.checkin < cout && cin < b.checkout);
+  if (occ) return mostraOccupata(occ);
   const row = { source: N.cat, code: 'M-' + Date.now(), manual: true, property: N.prop, checkin: cin, checkout: cout, payout: amount,
     guest_name: $('#f_name').value.trim() || null, guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_phone: $('#f_tel').value.trim() || null, status: 'confermata' };
   const { data, error } = await sb.from('bookings').insert(row).select();
   if (error) return toast('Non salvata: ' + error.message);
   S.data.bookings.push(data[0]); S.data.bookings.sort((a, b) => a.checkin.localeCompare(b.checkin));
-  closeSheet(); toast('Prenotazione salvata'); render();
+  closeSheet(); toast(N.cat === 'diretta' ? 'Prenotazione salvata · Airbnb e Booking si bloccano al prossimo aggiornamento' : 'Prenotazione salvata'); render();
   openBooking(data[0].id);   // subito la scheda, con il link check-in da mandare
 }
 
