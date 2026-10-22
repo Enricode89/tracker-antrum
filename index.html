@@ -1030,15 +1030,20 @@ function simRender() {
   rev.innerHTML = O > 0 ? `<div class="netbox" style="background:#FFF4D6;color:#6B4E00"><span class="lk" style="font-weight:700">Imposta su ${SIM_NOME[c]}</span><strong>${eur(Math.ceil(O / simQuota(c)))}</strong></div>` : '';
 }
 
-function openBooking(id) {
+function openBooking(id, nuova) {
   const b = S.data.bookings.find(x => x.id === id);
   const from = exBooking(b) ? 'Trasformata da Booking' : isManual(b) ? 'Inserita a mano' : (b.email_id ? 'Letta dalla mail ' : 'Dal calendario ') + CANALE[b.source];
   const [tb, tf] = CH_TINT[isManual(b) ? 'diretta' : b.source];
   const n = b.checkout ? diffDays(b.checkin, b.checkout) : null;
   const giorno = iso => { const d = parse(iso); return `<span class="small muted" style="font-weight:700">${GG_L[d.getUTCDay()]}</span><b style="font-size:20px">${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</b>`; };
   const tel = String(b.guest_phone || '').trim();
+  // appena inserita a mano: le date vanno chiuse a mano anche su Airbnb e Booking
+  const promemoria = nuova && b.checkout ? `<div role="alert" style="background:var(--amber-t);color:var(--amber-d);border-radius:16px;padding:14px 16px;display:grid;gap:6px">
+      <b style="font-size:16px">Blocca le date su Airbnb e Booking</b>
+      <span style="font-size:14px">Antrum ${PROP[b.property] || ''} · ${GG_L[parse(b.checkin).getUTCDay()]} ${dLabel(b.checkin)} → ${GG_L[parse(b.checkout).getUTCDay()]} ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}</span>
+      <span class="small" style="font-weight:600">Chiudi queste date a mano su entrambe le piattaforme, poi manda all'ospite il link check-in qui sotto.</span></div>` : '';
   sheet(sheetHead('Soggiorno') + `
-    <div class="stack">
+    <div class="stack">${promemoria}
     <div class="card stack" style="gap:14px">
       <div class="between" style="align-items:flex-start"><div style="min-width:0"><div class="small muted" style="font-weight:700;letter-spacing:.04em">ANTRUM ${(PROP[b.property] || '').toUpperCase()}</div>
         <div style="font-size:22px;font-weight:800;line-height:1.2">${esc(b.guest_name || 'Ospite')}</div></div>
@@ -1380,8 +1385,9 @@ async function saveNuovo() {
   const { data, error } = await sb.from('bookings').insert(row).select();
   if (error) return toast('Non salvata: ' + error.message);
   S.data.bookings.push(data[0]); S.data.bookings.sort((a, b) => a.checkin.localeCompare(b.checkin));
-  closeSheet(); toast(N.cat === 'diretta' ? 'Prenotazione salvata · Airbnb e Booking si bloccano al prossimo aggiornamento' : 'Prenotazione salvata'); render();
-  openBooking(data[0].id);   // subito la scheda, con il link check-in da mandare
+  const blocca = N.cat === 'diretta';
+  closeSheet(); toast('Prenotazione salvata'); render();
+  openBooking(data[0].id, blocca);   // subito la scheda: promemoria per bloccare le date + link check-in da mandare
 }
 
 function openFixed(id) {
