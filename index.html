@@ -135,6 +135,17 @@ h2{margin:0;font-size:17px;font-weight:700}
 .cell .b{display:block;height:9px;margin:0 3px;border-radius:6px;background:#EEF0EC}
 .cell .b.big{height:22px;background:transparent}
 
+.przbase{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:0;font:inherit;color:inherit;margin-top:14px}
+.pcell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 0 5px;min-height:56px;border:0;background:transparent;border-radius:12px;font:inherit;color:inherit}
+.pcell .n{width:28px;height:28px;line-height:28px;border-radius:999px;font-size:14px;font-weight:600;text-align:center}
+.pcell.today .n{box-shadow:inset 0 0 0 2px var(--ink)}
+.pcell.pass{opacity:.35}
+.pcell.sel{background:var(--ink);color:#fff}.pcell.sel .pz{color:#fff;background:rgba(255,255,255,.16)}
+.pz{font-size:11px;font-weight:700;color:var(--muted);border-radius:6px;padding:1px 4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pz.cus{background:#FFF1B8;color:#4D3400}.pz.chiuso{background:var(--red-t);color:var(--red-d)}.pz.occ{background:#EEF0EC;color:var(--muted);font-weight:600}
+.przleg{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:10px}.przleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.przleg i.cus{background:#FFF1B8}.przleg i.chiuso{background:var(--red-t)}.przleg i.occ{background:#EEF0EC}
+
 /* nav */
 nav.bottom{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:8px 8px calc(10px + var(--safe-b));display:flex;justify-content:center;z-index:20}
 nav.bottom .in{max-width:480px;width:100%;display:flex;justify-content:space-around;align-items:center}
@@ -244,6 +255,8 @@ const ICON = {
   eyeoff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   calc:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h4"/>',
   bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  right:'<path d="M9 18l6-6-6-6"/>',
+  tag:'<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
 };
 const ic = (n, s = 20, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
@@ -438,7 +451,7 @@ function header(title, eye = false, add = false) {
 function navBar() {
   const it = (tab, label, icon, n) => `<button class="n" ${S.tab === tab ? 'aria-current="page"' : ''} aria-label="${label}${n ? ' (' + n + ' da inviare)' : ''}" onclick="go('${tab}')">${ic(icon, 22)}${label}${n ? `<span class="nbadge">${n}</span>` : ''}</button>`;
   const daInv = ckLista().filter(b => ckStato(b) === 'ricevuto').length;
-  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'cal', daInv)}${it('bil', 'Bilancio', 'trend')}${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}</div></nav>`;
+  return `<nav class="bottom"><div class="in">${it('home', 'Home', 'cal', daInv)}${it('bil', 'Bilancio', 'trend')}${it('mov', 'Movimenti', 'swap')}${it('pul', 'Pulizie', 'spark')}${it('prz', 'Prezzi', 'tag')}</div></nav>`;
 }
 
 function viewBilancio() {
@@ -1433,9 +1446,123 @@ async function endFixed(id) {
 // =====================================================================
 // Navigazione, login, avvio
 // =====================================================================
+// ---------------- Prezzi e calendario del sito ----------------
+// Listino del sito (prezzo base, minimo notti, tassa) + prezzi per periodo e chiusure, giorno per giorno.
+// Le date occupate arrivano da prenotazioni + calendari Airbnb/Booking. Salvato nello script Google: il sito si aggiorna subito.
+const PRZ = { s: 'loft', off: 0, cfg: null, occ: null, sel: null, err: '', busy: false };
+const dPiu = (d, n = 1) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+async function przApi(cfg) {
+  const { data } = await sb.auth.getSession();
+  const r = await fetch(SCRIPT_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ azione: 'sito', token: data && data.session ? data.session.access_token : '', cfg: cfg || null }) }).then(x => x.json());
+  if (!r.ok) throw new Error(r.errore || 'non riuscito');
+  PRZ.cfg = r.cfg; PRZ.occ = r.occ; return r;
+}
+async function przCarica() {
+  if (PRZ.busy) return; PRZ.busy = true; PRZ.err = '';
+  try { await przApi(); } catch (e) { PRZ.err = e.message; }
+  PRZ.busy = false; if (S.tab === 'prz') render();
+}
+function przRun(s, d) { return PRZ.cfg.r.find(x => x.s === s && d >= x.da && d <= x.al); }
+function przNotte(s, d) {
+  const run = przRun(s, d), b = S.data.bookings.find(x => x.status === 'confermata' && x.property === s && x.checkin <= d && x.checkout && d < x.checkout);
+  const blocco = !b && (PRZ.occ[s] || []).some(r => d >= r[0] && d < r[1]);
+  return { p: run && run.p || PRZ.cfg.base[s], custom: !!(run && run.p), chiuso: !!(run && run.c), b, blocco };
+}
+function viewPrezzi() {
+  const top = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Prezzi</h1></div>
+    <button class="iconbtn" aria-label="Ricarica" onclick="przCarica()">${ic('repeat', 18)}</button></div>
+    <div class="seg" style="margin-top:12px"><button aria-pressed="${PRZ.s === 'loft'}" onclick="PRZ.s='loft';PRZ.sel=null;render()">Loft</button><button aria-pressed="${PRZ.s === 'suite'}" onclick="PRZ.s='suite';PRZ.sel=null;render()">Suite</button></div></header>`;
+  if (!PRZ.cfg) { if (!PRZ.err) przCarica(); return top + `<div class="card" style="text-align:center;padding:28px">${PRZ.err ? 'Non caricato: ' + esc(PRZ.err) + `<br><button class="btn mt" onclick="przCarica()">Riprova</button>` : 'Caricamento listino…'}</div>`; }
+  const s = PRZ.s, c = PRZ.cfg, oggi = todayIso();
+  const base = `<button class="card przbase" onclick="przBase()" aria-label="Modifica prezzo base, minimo notti e tassa">
+    <div><div class="small muted" style="font-weight:700">PREZZO BASE ${PROP[s].toUpperCase()}</div><div style="font-size:26px;font-weight:800">${c.base[s] ? eur0(c.base[s]) + '<span class="small muted" style="font-weight:600"> /notte</span>' : '—<span class="small muted" style="font-weight:600"> nessun prezzo</span>'}</div>
+    <div class="small muted">Minimo ${c.min[s]} ${c.min[s] === 1 ? 'notte' : 'notti'} · tassa ${eur(c.tassa)} a persona/notte</div></div><span class="small" style="font-weight:700">Modifica ${ic('right', 14)}</span></button>`;
+  const y0 = now.getFullYear(), m0 = now.getMonth() + PRZ.off, y = y0 + Math.floor(m0 / 12), m = ((m0 % 12) + 12) % 12;
+  const primo = (new Date(y, m, 1).getDay() + 6) % 7, giorni = new Date(y, m + 1, 0).getDate();
+  const a = PRZ.sel && PRZ.sel.a, z = PRZ.sel && (PRZ.sel.b || PRZ.sel.a);
+  let cells = '<span></span>'.repeat(primo);
+  for (let g = 1; g <= giorni; g++) {
+    const d = isoOf(y, m, g), n = przNotte(s, d), pass = d < oggi, sel = a && d >= a && d <= z;
+    const sotto = n.b ? `<span class="pz occ" style="background:${CH_TINT[isManual(n.b) ? 'diretta' : n.b.source][0]};color:${CH_TINT[isManual(n.b) ? 'diretta' : n.b.source][1]}">${esc((n.b.guest_name || 'Ospite').split(' ')[0])}</span>`
+      : n.blocco ? '<span class="pz occ" title="Bloccato su Airbnb o Booking">—</span>' : n.chiuso ? '<span class="pz chiuso">chiuso</span>' : `<span class="pz${n.custom ? ' cus' : ''}">${n.p ? Math.round(n.p) : '—'}</span>`;
+    cells += `<button class="pcell${pass ? ' pass' : ''}${sel ? ' sel' : ''}${d === oggi ? ' today' : ''}" ${pass ? 'disabled' : ''} onclick="przTocca('${d}')" aria-label="${g} ${MESI[m]}"><span class="n">${g}</span>${sotto}</button>`;
+  }
+  const cal = `<section class="cal" style="margin-top:12px"><div class="between" style="padding:0 6px 10px">
+      <button class="iconbtn" style="border:0;background:none;width:34px" ${PRZ.off <= 0 ? 'disabled' : ''} aria-label="Mese precedente" onclick="PRZ.off--;render()">${ic('left', 18)}</button>
+      <b style="font-size:16px">${MESI[m]} ${y}</b>
+      <button class="iconbtn" style="border:0;background:none;width:34px" ${PRZ.off >= 17 ? 'disabled' : ''} aria-label="Mese successivo" onclick="PRZ.off++;render()">${ic('right', 18)}</button></div>
+    <div class="dow"><span>LUN</span><span>MAR</span><span>MER</span><span>GIO</span><span>VEN</span><span>SAB</span><span>DOM</span></div><div class="grid">${cells}</div>
+    <div class="przleg small muted"><span><i class="cus"></i>prezzo diverso</span><span><i class="chiuso"></i>chiuso sul sito</span><span><i class="occ"></i>prenotato · — bloccato</span></div></section>`;
+  let az = `<p class="small muted" style="text-align:center;margin:14px 8px 0">Tocca un giorno, o il primo e l'ultimo di un periodo, per cambiare prezzo o chiudere le date sul sito.</p>`;
+  if (a) {
+    const nn = Math.round((Date.parse(z) - Date.parse(a)) / 864e5) + 1;
+    let pr = null; for (let d = a; d <= z; d = dPiu(d)) { const p = przNotte(s, d).p; pr = pr === null ? p : pr === p ? p : -1; }
+    az = `<div class="card stack przaz" style="margin-top:12px;gap:12px">
+      <div class="between"><b>${dLabel(a)}${z !== a ? ' → ' + dLabel(z) : ''} · ${nn} ${nn === 1 ? 'notte' : 'notti'}</b><button class="small" style="border:0;background:none;color:var(--muted);font-weight:700" onclick="PRZ.sel=null;render()">Annulla</button></div>
+      <label class="field">Prezzo a notte<div class="money"><span>€</span><input id="pz_p" inputmode="decimal" value="${pr > 0 ? String(pr).replace('.', ',') : ''}" placeholder="${pr === -1 ? 'prezzi diversi' : ''}"></div></label>
+      <button class="btn" ${PRZ.busy ? 'disabled' : ''} onclick="przApplica('p')">Salva prezzo</button>
+      <div class="grid2"><button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="przApplica('base')">Torna al base</button>
+      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--red-d);border:1px solid var(--red-t)" onclick="przApplica('chiudi')">Chiudi sul sito</button></div>
+      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="przApplica('apri')">Riapri sul sito</button>
+      <p class="small muted" style="margin:0">Vale solo per il sito: su Airbnb e Booking prezzi e chiusure restano da impostare lì.</p></div>`;
+  }
+  return top + base + cal + az;
+}
+function przTocca(d) {
+  const S2 = PRZ.sel;
+  if (!S2 || S2.b) PRZ.sel = { a: d, b: null };
+  else if (d >= S2.a) PRZ.sel = { a: S2.a, b: d === S2.a ? null : d };
+  else PRZ.sel = { a: d, b: null };
+  render();
+  const el = $('.przaz'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// ricostruisce i periodi della struttura dopo la modifica: giorni uguali consecutivi = un solo periodo (listino sempre compatto)
+async function przApplica(op) {
+  const s = PRZ.s, a = PRZ.sel.a, z = PRZ.sel.b || PRZ.sel.a, val = num(($('#pz_p') || {}).value);
+  if (op === 'p' && !(val > 0)) return toast('Inserisci il prezzo a notte');
+  const giorni = {};
+  PRZ.cfg.r.filter(x => x.s === s).forEach(x => { for (let d = x.da; d <= x.al; d = dPiu(d)) giorni[d] = { p: x.p || 0, c: x.c ? 1 : 0 }; });
+  for (let d = a; d <= z; d = dPiu(d)) {
+    const g = giorni[d] || { p: 0, c: 0 };
+    if (op === 'p') g.p = val; else if (op === 'base') g.p = 0; else if (op === 'chiudi') g.c = 1; else g.c = 0;
+    giorni[d] = g;
+  }
+  const r = PRZ.cfg.r.filter(x => x.s !== s);
+  Object.keys(giorni).sort().forEach(d => {
+    const g = giorni[d]; if (!g.p && !g.c) return;
+    const l = r[r.length - 1];
+    if (l && l.s === s && dPiu(l.al) === d && (l.p || 0) === g.p && (l.c || 0) === g.c) l.al = d;
+    else { const o = { s, da: d, al: d }; if (g.p) o.p = g.p; if (g.c) o.c = 1; r.push(o); }
+  });
+  await przSalva(Object.assign({}, PRZ.cfg, { r }), { p: 'Prezzo salvato', base: 'Tornato al prezzo base', chiudi: 'Date chiuse sul sito', apri: 'Date riaperte sul sito' }[op]);
+}
+async function przSalva(cfg, msg) {
+  PRZ.busy = true; render();
+  try { await przApi(cfg); PRZ.sel = null; closeSheet(); toast(msg + ' · il sito è già aggiornato'); }
+  catch (e) { toast('Non salvato: ' + e.message); }
+  PRZ.busy = false; render();
+}
+function przBase() {
+  const s = PRZ.s, c = PRZ.cfg;
+  sheet(sheetHead('Listino ' + PROP[s]) + `<div class="stack">
+    <label class="field">Prezzo base a notte<div class="money"><span>€</span><input id="pb_p" inputmode="decimal" value="${c.base[s] ? String(c.base[s]).replace('.', ',') : ''}" placeholder="vuoto = nessun prezzo"></div></label>
+    <label class="field">Soggiorno minimo (notti)<input id="pb_m" inputmode="numeric" value="${c.min[s]}"></label>
+    <label class="field">Tassa di soggiorno a persona/notte (Loft e Suite)<div class="money"><span>€</span><input id="pb_t" inputmode="decimal" value="${String(c.tassa).replace('.', ',')}"></div></label>
+    <button class="btn" onclick="przSalvaBase()">Salva</button>
+    <p class="small muted" style="margin:0">Il prezzo base vale per tutti i giorni senza un prezzo diverso. Vuoto: sul sito quei giorni mostrano un trattino e il prezzo è su richiesta.</p></div>`);
+}
+function przSalvaBase() {
+  const s = PRZ.s, p = num($('#pb_p').value) || 0, m = Math.round(+$('#pb_m').value), t = num($('#pb_t').value);
+  if (p < 0) return toast('Prezzo base non valido');
+  if (!(m >= 1 && m <= 30)) return toast('Minimo notti tra 1 e 30');
+  const cfg = JSON.parse(JSON.stringify(PRZ.cfg)); cfg.base[s] = p; cfg.min[s] = m; cfg.tassa = t >= 0 ? t : 0;
+  przSalva(cfg, 'Listino salvato');
+}
+
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 function render() {
-  const v = { home: viewHome, bil: viewBilancio, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer }[S.tab]();
+  const v = { home: viewHome, bil: viewBilancio, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer, prz: viewPrezzi }[S.tab]();
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
