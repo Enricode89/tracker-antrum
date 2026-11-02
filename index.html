@@ -1592,55 +1592,54 @@ function przSalvaBase() {
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 // Messaggi pronti: template copia e incolla, compilati con i dati della prenotazione scelta (salvati su questo telefono)
 const SITO_URL = 'https://enricode89.github.io/testweb/antrum-salerno.html', GUIDA_URL = 'https://antrumguida.vercel.app';
-// testi presi dai modelli Airbnb di Enrico (2/11). Codici locker e WiFi NON stanno nel codice (il sito è pubblico): si scrivono dalla casetta e restano sul telefono
-const TPL_VER = 3;
+// testi dai modelli Airbnb di Enrico, resi generici e impersonali (2/11). Codici locker e WiFi NON stanno nel codice (il sito è pubblico): si scrivono dalla casetta e restano sul telefono
+const TPL_VER = 4, TPL_RESET = 4;   // 4: testi generici e impersonali (2/11), sostituiscono i predefiniti
 const TPL_DEF = [
   { id: 'guida', t: 'Conferma e guida',
-    it: '{nome}, grazie per averci scelto!\n\nEcco la nostra guida interattiva, qui troverai Informazioni & Consigli ✨✨\n\n{guida}\n\nIl team Antrum Loft & Suite',
-    en: '{nome}, thank you for choosing us!\n\nHere is our interactive guide, with all the information & tips ✨✨\n\n{guida}\n\nThe Antrum Loft & Suite team' },
-  { id: 'guida_dig', dal: 3, t: 'Guida digitale',
+    it: 'Grazie per averci scelto!\n\nEcco la guida interattiva con Informazioni & Consigli ✨✨\n\n{guida}\n\nIl team Antrum Loft & Suite',
+    en: 'Thank you for choosing us!\n\nHere is the interactive guide with information & tips ✨✨\n\n{guida}\n\nThe Antrum Loft & Suite team' },
+  { id: 'guida_dig', t: 'Guida digitale',
     it: 'Ecco la nostra guida digitale, qui troverai Informazioni & Consigli ✨✨\n\n{guida}\n\nIl team Antrum Loft & Suite',
     en: 'Here is our digital guide, with all the information & tips ✨✨\n\n{guida}\n\nThe Antrum Loft & Suite team' },
   { id: 'ck', t: 'Link check-in online',
-    it: 'Ciao {nome}, ecco il link per il check-in online del soggiorno dal {arrivo} al {partenza} ad Antrum {struttura}:\n{link_checkin}\nTieni pronto il documento: ti chiederemo foto fronte e retro e un selfie con il documento in mano.',
-    en: 'Hi {nome}, here is the link for the online check-in for your stay from {arrivo} to {partenza} at Antrum {struttura}:\n{link_checkin}\nPlease have your ID ready: we will ask for a photo of front and back and a selfie holding it.' },
+    it: 'Ecco il link per il check-in online:\n{link_checkin}\n\nÈ necessario un documento d\'identità: verranno richieste le foto fronte e retro e un selfie con il documento in mano.',
+    en: 'Here is the link for the online check-in:\n{link_checkin}\n\nAn ID document is required: photos of the front and back and a selfie holding it will be requested.' },
   { id: 'istr', t: 'Istruzioni',
-    it: '🌞 Buongiorno {nome},\nTi ringraziamo di cuore per averci scelto e saremo felicissimi di ospitarvi! 🏡✨\n• Ti invitiamo a effettuare il check-in online da questo link:\n{link_checkin}\n• Il codice di accesso alla struttura sarà disponibile il {arrivo} 🔑\n• Con questo codice potrai aprire la cassaforte che contiene le chiavi dell\'appartamento.\n\nTi ricordo la nostra fantastica guida interattiva\n{guida}\n\n⚠️ Nota importante: l\'accesso con auto o scooter è riservato solo ai residenti.\n\nIl team Antrum Loft & Suite',
-    en: '🌞 Good morning {nome},\nThank you so much for choosing us, we can\'t wait to host you! 🏡✨\n• Please complete the online check-in using this link:\n{link_checkin}\n• The access code to the property will be available on {arrivo} 🔑\n• With this code you can open the key box that holds the apartment keys.\n\nDon\'t miss our interactive guide\n{guida}\n\n⚠️ Important: access by car or scooter is reserved for residents only.\n\nThe Antrum Loft & Suite team' },
+    it: '🌞 Buongiorno,\ngrazie per averci scelto, saremo felicissimi di ospitarvi! 🏡✨\n• Il check-in online si effettua da questo link:\n{link_checkin}\n• Il codice di accesso alla struttura verrà inviato il giorno dell\'arrivo 🔑\n• Il codice apre la cassetta che contiene le chiavi dell\'appartamento.\n\nGuida interattiva:\n{guida}\n\n⚠️ Nota importante: l\'accesso con auto o scooter è riservato solo ai residenti.\n\nIl team Antrum Loft & Suite',
+    en: '🌞 Good morning,\nthank you for choosing us, we look forward to hosting you! 🏡✨\n• The online check-in can be completed at this link:\n{link_checkin}\n• The access code will be sent on the day of arrival 🔑\n• The code opens the key box holding the apartment keys.\n\nInteractive guide:\n{guida}\n\n⚠️ Important: access by car or scooter is reserved for residents only.\n\nThe Antrum Loft & Suite team' },
   { id: 'arr_loft', s: 'loft', t: 'Come arrivare Loft',
-    it: 'Ciao {nome}, di seguito alcuni percorsi per raggiungere il loft:\n- dalla Stazione treni\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- dal Molo Manfredi\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- da Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9',
-    en: 'Hi {nome}, here are some routes to reach the loft:\n- from the train station\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- from Molo Manfredi (ferry pier)\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- from Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9' },
+    it: 'Ecco alcuni percorsi per raggiungere il Loft:\n- dalla Stazione treni\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- dal Molo Manfredi\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- da Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9',
+    en: 'Here are some routes to reach the Loft:\n- from the train station\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- from Molo Manfredi (ferry pier)\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- from Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9' },
   { id: 'cod_loft', s: 'loft', t: 'Codice accesso Loft',
-    it: 'Eccoci {nome}, il codice del locker che contiene le chiavi della porta d\'ingresso è {codice}!\nLa porta si apre con entrambe le mani, una girando la chiave e l\'altra sulla maniglia. Tira verso di te e poi spingi!!!\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nEcco la nostra fantastica guida ✨\n{guida}\n\nBuon soggiorno!',
-    en: 'Here we are {nome}, the code of the key box holding the front door keys is {codice}!\nThe door opens with both hands: turn the key with one and hold the handle with the other. Pull towards you and then push!!!\n\nIMPORTANT - Don\'t leave the code visible once you have taken the key.\n\nHere is our guide ✨\n{guida}\n\nEnjoy your stay!' },
+    it: 'Benvenuti! Il codice del locker con le chiavi della porta d\'ingresso è {codice}.\nLa porta si apre con entrambe le mani: una gira la chiave, l\'altra tiene la maniglia. Tirare verso di sé e poi spingere.\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nGuida interattiva ✨\n{guida}\n\nBuon soggiorno!',
+    en: 'Welcome! The code of the key box holding the front door keys is {codice}.\nThe door opens with both hands: one turns the key, the other holds the handle. Pull towards you and then push.\n\nIMPORTANT - Do not leave the code visible once the key has been taken.\n\nInteractive guide ✨\n{guida}\n\nEnjoy your stay!' },
   { id: 'cod_suite', s: 'suite', t: 'Codice accesso Suite',
-    it: 'Eccoci {nome}, il portone principale è sempre aperto!\nIl codice del locker che contiene le chiavi della porta d\'ingresso è {codice}!\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nEcco la nostra guida interattiva, qui troverai Informazioni & Consigli ✨✨\n\n{guida}\n\nBuon soggiorno!',
-    en: 'Here we are {nome}, the main street door is always open!\nThe code of the key box holding the front door keys is {codice}!\n\nIMPORTANT - Don\'t leave the code visible once you have taken the key.\n\nHere is our interactive guide, with all the information & tips ✨✨\n\n{guida}\n\nEnjoy your stay!' },
-  { id: 'wifi', t: 'WiFi',
-    it: '📶 WiFi Antrum {struttura}\n{wifi}',
-    en: '📶 WiFi Antrum {struttura}\n{wifi}' },
+    it: 'Benvenuti! Il portone principale è sempre aperto.\nIl codice del locker con le chiavi della porta d\'ingresso è {codice}.\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nGuida interattiva con Informazioni & Consigli ✨✨\n{guida}\n\nBuon soggiorno!',
+    en: 'Welcome! The main street door is always open.\nThe code of the key box holding the front door keys is {codice}.\n\nIMPORTANT - Do not leave the code visible once the key has been taken.\n\nInteractive guide with information & tips ✨✨\n{guida}\n\nEnjoy your stay!' },
+  { id: 'wifi_loft', s: 'loft', t: 'WiFi Loft', it: '📶 WiFi Antrum Loft\n{wifi}', en: '📶 WiFi Antrum Loft\n{wifi}' },
+  { id: 'wifi_suite', s: 'suite', t: 'WiFi Suite', it: '📶 WiFi Antrum Suite\n{wifi}', en: '📶 WiFi Antrum Suite\n{wifi}' },
   { id: 'taxi', t: 'Taxi',
     it: 'Ecco il numero di riferimento dei taxi.\n+393770897575 attivo su WhatsApp',
-    en: 'Here is the taxi number we recommend.\n+393770897575, also on WhatsApp' },
+    en: 'Here is the recommended taxi number.\n+393770897575, also on WhatsApp' },
   { id: 'out_loft', s: 'loft', t: 'Check-out Loft',
-    it: 'Buongiorno {nome}, speriamo che il vostro soggiorno sia stato piacevole. Le ricordiamo che il check-out è alle ore {ora_checkout}; potete comunque trattenervi fino alle 10:30!\n\nPuoi riporre le chiavi nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nRestiamo a disposizione,\nIl Team Antrum Loft & Suite',
-    en: 'Good morning {nome}, we hope you enjoyed your stay. Just a reminder that check-out is at {ora_checkout}; you can stay until 10:30 anyway!\n\nPlease put the keys back in the key box.\n\nIMPORTANT - Don\'t leave the code visible once the key is back inside.\n\nWe remain at your disposal,\nThe Antrum Loft & Suite team' },
+    it: 'Buongiorno, si ricorda che il check-out è alle ore {ora_checkout}; è comunque possibile trattenersi fino alle 10:30.\n\nLe chiavi vanno riposte nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nGrazie e a presto!\nIl team Antrum Loft & Suite',
+    en: 'Good morning, a reminder that check-out is at {ora_checkout}; it is still possible to stay until 10:30.\n\nThe keys go back in the key box.\n\nIMPORTANT - Do not leave the code visible once the key is back inside.\n\nThank you and see you soon!\nThe Antrum Loft & Suite team' },
   { id: 'out_suite', s: 'suite', t: 'Check-out Suite',
-    it: 'Buongiorno {nome}, speriamo che il vostro soggiorno sia stato piacevole. Le ricordiamo che il check-out è alle ore {ora_checkout}.\n\nPuoi riporre le chiavi nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nEcco la nostra fantastica guida ✨\n{guida}\n\nRestiamo a disposizione,\nIl Team Antrum Loft & Suite',
-    en: 'Good morning {nome}, we hope you enjoyed your stay. Just a reminder that check-out is at {ora_checkout}.\n\nPlease put the keys back in the key box.\n\nIMPORTANT - Don\'t leave the code visible once the key is back inside.\n\nHere is our guide ✨\n{guida}\n\nWe remain at your disposal,\nThe Antrum Loft & Suite team' },
+    it: 'Buongiorno, si ricorda che il check-out è alle ore {ora_checkout}.\n\nLe chiavi vanno riposte nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nGuida interattiva ✨\n{guida}\n\nGrazie e a presto!\nIl team Antrum Loft & Suite',
+    en: 'Good morning, a reminder that check-out is at {ora_checkout}.\n\nThe keys go back in the key box.\n\nIMPORTANT - Do not leave the code visible once the key is back inside.\n\nInteractive guide ✨\n{guida}\n\nThank you and see you soon!\nThe Antrum Loft & Suite team' },
   { id: 'rec', t: 'Richiesta recensione',
-    it: 'Ciao {nome}, grazie di cuore per essere stato nostro ospite ad Antrum {struttura}! Se ti sei trovato bene, una recensione ci aiuta tantissimo ⭐ Ti aspettiamo di nuovo a Salerno!',
-    en: 'Hi {nome}, thank you so much for staying with us at Antrum {struttura}! If you enjoyed it, a review would help us a lot ⭐ We hope to welcome you again in Salerno!' },
+    it: 'Grazie per aver soggiornato ad Antrum Loft & Suite! Se il soggiorno è stato piacevole, una recensione è per noi un aiuto prezioso ⭐ A presto a Salerno!',
+    en: 'Thank you for staying at Antrum Loft & Suite! If the stay was enjoyable, a review would be a great help ⭐ Hope to see you again in Salerno!' },
   { id: 'dir', t: 'Prenota direttamente',
-    it: 'Ciao {nome}, la prossima volta puoi prenotare direttamente dal nostro sito, con disponibilità e prezzi sempre aggiornati:\n{sito}\nTi aspettiamo!',
-    en: 'Hi {nome}, next time you can book directly on our website, with up-to-date availability and prices:\n{sito}\nSee you soon!' },
+    it: 'Per i prossimi soggiorni è possibile prenotare direttamente dal nostro sito, con disponibilità e prezzi sempre aggiornati:\n{sito}\nA presto!',
+    en: 'For future stays it is possible to book directly on our website, with up-to-date availability and prices:\n{sito}\nSee you soon!' },
 ];
 const TPL_INFO_DEF = { ora_checkin_loft: '15:00', ora_checkout_loft: '10:00', ora_checkin_suite: '16:00', ora_checkout_suite: '11:00', codice_loft: '', codice_suite: '', wifi_loft: '', wifi_suite: '' };   // orari dati da Enrico il 2/11
 // versione nuova dei testi: sostituisce i modelli predefiniti, tiene quelli creati da Enrico
 const TPL = (() => { let d = {}; try { d = JSON.parse(localStorage.getItem('antrum-tpl')) || {}; } catch (e) {}
   const suoi = Array.isArray(d.lista) ? d.lista.filter(x => String(x.id).startsWith('u')) : [];
   let lista = Array.isArray(d.lista) && d.v === TPL_VER ? d.lista : [...TPL_DEF.map(x => ({ ...x })), ...suoi];
-  if (Array.isArray(d.lista) && d.v >= 2 && d.v < TPL_VER) {   // tiene le modifiche di Enrico e aggiunge solo i messaggi nuovi
+  if (Array.isArray(d.lista) && d.v >= TPL_RESET && d.v < TPL_VER) {   // tiene le modifiche di Enrico e aggiunge solo i messaggi nuovi
     lista = [...d.lista];
     TPL_DEF.forEach((x, n) => { if (x.dal > d.v && !lista.some(y => y.id === x.id)) { const p = n ? lista.findIndex(y => y.id === TPL_DEF[n - 1].id) : -1; lista.splice(p + 1, 0, { ...x }); } });
   }
@@ -1650,8 +1649,8 @@ function tplBookings() {
   const oggi = todayIso(), da = addDays(oggi, -10);
   return S.data.bookings.filter(b => b.status === 'confermata' && b.checkin && (b.checkout || b.checkin) >= da).sort((a, b) => a.checkin.localeCompare(b.checkin));
 }
-function tplDati(b) {
-  const en = TPL.lang === 'en', i = TPL.info, s = b && b.property;
+function tplDati(b, t) {
+  const en = TPL.lang === 'en', i = TPL.info, s = (b && b.property) || (t && t.s);   // i messaggi di una sola struttura si compilano anche senza ospite
   const d = iso => { if (!iso) return ''; const x = parse(iso); return en ? `${x.getUTCDate()} ${['January','February','March','April','May','June','July','August','September','October','November','December'][x.getUTCMonth()]}` : `${x.getUTCDate()} ${MESI[x.getUTCMonth()].toLowerCase()}`; };
   const n = b && b.checkout ? diffDays(b.checkin, b.checkout) : 0, g = b && b.guests;
   return { nome: b ? (b.guest_name || '').trim().split(/\s+/)[0] : '', struttura: b ? PROP[s] || '' : '', arrivo: b ? d(b.checkin) : '', partenza: b ? d(b.checkout) : '',
@@ -1661,7 +1660,7 @@ function tplDati(b) {
 }
 // testo finale (per copiare) e anteprima (con i campi mancanti evidenziati)
 function tplTesto(t, b, html) {
-  const v = tplDati(b), src = t[TPL.lang] || t.it || '';
+  const v = tplDati(b, t), src = t[TPL.lang] || t.it || '';
   if (!html) return src.replace(/\{(\w+)\}/g, (m, k) => k in v ? v[k] || (k === 'nome' ? '' : '…') : m).replace(/Ciao ,/g, 'Ciao,').replace(/Hi ,/g, 'Hi,');
   return esc(src).replace(/\{(\w+)\}/g, (m, k) => !(k in v) ? m : v[k] ? `<b>${esc(v[k])}</b>` : `<span class="tplvuoto">${k.replace('_', ' ')}</span>`);
 }
@@ -1672,7 +1671,7 @@ function viewMsg() {
     <div class="seg" style="margin-top:12px"><button aria-pressed="${TPL.lang === 'it'}" onclick="TPL.lang='it';tplSalva();render()">Italiano</button><button aria-pressed="${TPL.lang === 'en'}" onclick="TPL.lang='en';tplSalva();render()">English</button></div></header>`;
   const chip = x => `<button class="tplb" aria-pressed="${TPL.b === x.id}" onclick="TPL.b=TPL.b==='${x.id}'?null:'${x.id}';render()"><b>${esc((x.guest_name || 'Ospite').split(/\s+/)[0])}</b><span>${PROP[x.property] || ''} · ${dLabel(x.checkin)}</span></button>`;
   const ospite = `<div class="small muted" style="font-weight:700;margin:2px 4px 8px">PER CHI</div><div class="tplbs">${lista.length ? lista.map(chip).join('') : '<span class="small muted">Nessuna prenotazione in arrivo</span>'}</div>
-    ${b ? '' : '<div class="small muted" style="margin:8px 4px 0">Scegli un ospite: nome, date e link si compilano da soli.</div>'}`;
+    ${b ? '' : '<div class="small muted" style="margin:8px 4px 0">Scegli un ospite per inserire il suo link check-in.</div>'}`;
   const card = (t, k) => b && t.s && t.s !== b.property ? '' : `<div class="card stack" style="gap:10px">
     <div class="between"><b>${esc(t.t)}${t.s && !b ? ` <span class="tplsolo">solo ${PROP[t.s]}</span>` : ''}</b><button class="tplmod" onclick="tplModifica(${k})">Modifica</button></div>
     <div class="tpltxt">${tplTesto(t, b, true)}</div>
