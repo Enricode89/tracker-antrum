@@ -167,6 +167,7 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}}
 .field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
 .field input,.field select,.field textarea{height:50px;border-radius:14px;border:1px solid #D9DCD6;background:#fff;padding:0 14px;font-size:15px;font-weight:600;color:var(--ink);width:100%}
+.tplsolo{font-size:11px;font-weight:700;color:var(--muted);background:var(--ground);border-radius:6px;padding:2px 6px;margin-left:4px}
 .tplbs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}.tplbs::-webkit-scrollbar{display:none}
 .tplb{flex:0 0 auto;display:grid;gap:2px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px 12px;font-size:14px}
 .tplb span{font-size:12px;color:var(--muted);font-weight:600}.tplb[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}.tplb[aria-pressed="true"] span{color:#C9D0D6}
@@ -1590,20 +1591,40 @@ function przSalvaBase() {
 
 function go(tab) { S.tab = tab; closeSheet(); render(); window.scrollTo(0, 0); }
 // Messaggi pronti: template copia e incolla, compilati con i dati della prenotazione scelta (salvati su questo telefono)
-const SITO_URL = 'https://enricode89.github.io/testweb/antrum-salerno.html';
+const SITO_URL = 'https://enricode89.github.io/testweb/antrum-salerno.html', GUIDA_URL = 'https://antrumguida.vercel.app';
+// testi presi dai modelli Airbnb di Enrico (2/11). Codici locker e WiFi NON stanno nel codice (il sito è pubblico): si scrivono dalla casetta e restano sul telefono
+const TPL_VER = 2;
 const TPL_DEF = [
-  { id: 'conf', t: 'Conferma prenotazione',
-    it: 'Ciao {nome}, grazie per aver scelto Antrum {struttura}! 😊\nTi confermo il soggiorno dal {arrivo} al {partenza} ({notti}) per {ospiti}.\nQualche giorno prima ti mando il link per il check-in online. Per qualsiasi cosa scrivimi pure qui.',
-    en: 'Hi {nome}, thank you for choosing Antrum {struttura}! 😊\nYour stay from {arrivo} to {partenza} ({notti}) for {ospiti} is confirmed.\nA few days before arrival I will send you the link for the online check-in. Feel free to write me here for anything.' },
+  { id: 'guida', t: 'Conferma e guida',
+    it: '{nome}, grazie per averci scelto!\n\nEcco la nostra guida interattiva, qui troverai Informazioni & Consigli ✨✨\n\n{guida}\n\nIl team Antrum Loft & Suite',
+    en: '{nome}, thank you for choosing us!\n\nHere is our interactive guide, with all the information & tips ✨✨\n\n{guida}\n\nThe Antrum Loft & Suite team' },
   { id: 'ck', t: 'Link check-in online',
     it: 'Ciao {nome}, ecco il link per il check-in online del soggiorno dal {arrivo} al {partenza} ad Antrum {struttura}:\n{link_checkin}\nTieni pronto il documento: ti chiederemo foto fronte e retro e un selfie con il documento in mano.',
     en: 'Hi {nome}, here is the link for the online check-in for your stay from {arrivo} to {partenza} at Antrum {struttura}:\n{link_checkin}\nPlease have your ID ready: we will ask for a photo of front and back and a selfie holding it.' },
-  { id: 'arr', t: 'Istruzioni di arrivo',
-    it: 'Ciao {nome}, domani ti aspettiamo ad Antrum {struttura}! 🏡\n📍 Indirizzo: {indirizzo}\n🕒 Check-in dalle {ora_checkin}\n📶 WiFi: {wifi}\nQuando sei in zona scrivimi e ti do tutte le indicazioni. A domani!',
-    en: 'Hi {nome}, we are waiting for you tomorrow at Antrum {struttura}! 🏡\n📍 Address: {indirizzo}\n🕒 Check-in from {ora_checkin}\n📶 WiFi: {wifi}\nText me when you are nearby and I will guide you. See you tomorrow!' },
-  { id: 'out', t: 'Promemoria check-out',
-    it: 'Ciao {nome}, spero che il soggiorno ad Antrum {struttura} sia stato piacevole! Ti ricordo che domani il check-out è entro le {ora_checkout}. Lascia pure le chiavi dove le hai trovate. Buon rientro! 🙏',
-    en: 'Hi {nome}, I hope you enjoyed your stay at Antrum {struttura}! Just a reminder that check-out tomorrow is by {ora_checkout}. Please leave the keys where you found them. Safe travels! 🙏' },
+  { id: 'istr', t: 'Istruzioni',
+    it: '🌞 Buongiorno {nome},\nTi ringraziamo di cuore per averci scelto e saremo felicissimi di ospitarvi! 🏡✨\n• Ti invitiamo a effettuare il check-in online da questo link:\n{link_checkin}\n• Il codice di accesso alla struttura sarà disponibile il {arrivo} 🔑\n• Con questo codice potrai aprire la cassaforte che contiene le chiavi dell\'appartamento.\n\nTi ricordo la nostra fantastica guida interattiva\n{guida}\n\n⚠️ Nota importante: l\'accesso con auto o scooter è riservato solo ai residenti.\n\nIl team Antrum Loft & Suite',
+    en: '🌞 Good morning {nome},\nThank you so much for choosing us, we can\'t wait to host you! 🏡✨\n• Please complete the online check-in using this link:\n{link_checkin}\n• The access code to the property will be available on {arrivo} 🔑\n• With this code you can open the key box that holds the apartment keys.\n\nDon\'t miss our interactive guide\n{guida}\n\n⚠️ Important: access by car or scooter is reserved for residents only.\n\nThe Antrum Loft & Suite team' },
+  { id: 'arr_loft', s: 'loft', t: 'Come arrivare Loft',
+    it: 'Ciao {nome}, di seguito alcuni percorsi per raggiungere il loft:\n- dalla Stazione treni\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- dal Molo Manfredi\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- da Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9',
+    en: 'Hi {nome}, here are some routes to reach the loft:\n- from the train station\nhttps://maps.app.goo.gl/45ZJPDawAuE7FJzu8\n- from Molo Manfredi (ferry pier)\nhttps://maps.app.goo.gl/BsSfTGPr7tJrZS6G7\n- from Piazza della Concordia\nhttps://maps.app.goo.gl/j6RhLWQMJ8EG2cXh9' },
+  { id: 'cod_loft', s: 'loft', t: 'Codice accesso Loft',
+    it: 'Eccoci {nome}, il codice del locker che contiene le chiavi della porta d\'ingresso è {codice}!\nLa porta si apre con entrambe le mani, una girando la chiave e l\'altra sulla maniglia. Tira verso di te e poi spingi!!!\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nEcco la nostra fantastica guida ✨\n{guida}\n\nBuon soggiorno!',
+    en: 'Here we are {nome}, the code of the key box holding the front door keys is {codice}!\nThe door opens with both hands: turn the key with one and hold the handle with the other. Pull towards you and then push!!!\n\nIMPORTANT - Don\'t leave the code visible once you have taken the key.\n\nHere is our guide ✨\n{guida}\n\nEnjoy your stay!' },
+  { id: 'cod_suite', s: 'suite', t: 'Codice accesso Suite',
+    it: 'Eccoci {nome}, il portone principale è sempre aperto!\nIl codice del locker che contiene le chiavi della porta d\'ingresso è {codice}!\n\nIMPORTANTE - Non lasciare visibile il codice una volta presa la chiave.\n\nEcco la nostra guida interattiva, qui troverai Informazioni & Consigli ✨✨\n\n{guida}\n\nBuon soggiorno!',
+    en: 'Here we are {nome}, the main street door is always open!\nThe code of the key box holding the front door keys is {codice}!\n\nIMPORTANT - Don\'t leave the code visible once you have taken the key.\n\nHere is our interactive guide, with all the information & tips ✨✨\n\n{guida}\n\nEnjoy your stay!' },
+  { id: 'wifi', t: 'WiFi',
+    it: '📶 WiFi Antrum {struttura}\n{wifi}',
+    en: '📶 WiFi Antrum {struttura}\n{wifi}' },
+  { id: 'taxi', t: 'Taxi',
+    it: 'Ecco il numero di riferimento dei taxi.\n+393770897575 attivo su WhatsApp',
+    en: 'Here is the taxi number we recommend.\n+393770897575, also on WhatsApp' },
+  { id: 'out_loft', s: 'loft', t: 'Check-out Loft',
+    it: 'Buongiorno {nome}, speriamo che il vostro soggiorno sia stato piacevole. Le ricordiamo che il check-out è alle ore {ora_checkout}; potete comunque trattenervi fino alle 10:30!\n\nPuoi riporre le chiavi nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nRestiamo a disposizione,\nIl Team Antrum Loft & Suite',
+    en: 'Good morning {nome}, we hope you enjoyed your stay. Just a reminder that check-out is at {ora_checkout}; you can stay until 10:30 anyway!\n\nPlease put the keys back in the key box.\n\nIMPORTANT - Don\'t leave the code visible once the key is back inside.\n\nWe remain at your disposal,\nThe Antrum Loft & Suite team' },
+  { id: 'out_suite', s: 'suite', t: 'Check-out Suite',
+    it: 'Buongiorno {nome}, speriamo che il vostro soggiorno sia stato piacevole. Le ricordiamo che il check-out è alle ore {ora_checkout}.\n\nPuoi riporre le chiavi nel locker.\n\nIMPORTANTE - Non lasciare visibile il codice una volta riposta la chiave.\n\nEcco la nostra fantastica guida ✨\n{guida}\n\nRestiamo a disposizione,\nIl Team Antrum Loft & Suite',
+    en: 'Good morning {nome}, we hope you enjoyed your stay. Just a reminder that check-out is at {ora_checkout}.\n\nPlease put the keys back in the key box.\n\nIMPORTANT - Don\'t leave the code visible once the key is back inside.\n\nHere is our guide ✨\n{guida}\n\nWe remain at your disposal,\nThe Antrum Loft & Suite team' },
   { id: 'rec', t: 'Richiesta recensione',
     it: 'Ciao {nome}, grazie di cuore per essere stato nostro ospite ad Antrum {struttura}! Se ti sei trovato bene, una recensione ci aiuta tantissimo ⭐ Ti aspettiamo di nuovo a Salerno!',
     en: 'Hi {nome}, thank you so much for staying with us at Antrum {struttura}! If you enjoyed it, a review would help us a lot ⭐ We hope to welcome you again in Salerno!' },
@@ -1611,10 +1632,13 @@ const TPL_DEF = [
     it: 'Ciao {nome}, la prossima volta puoi prenotare direttamente dal nostro sito, con disponibilità e prezzi sempre aggiornati:\n{sito}\nTi aspettiamo!',
     en: 'Hi {nome}, next time you can book directly on our website, with up-to-date availability and prices:\n{sito}\nSee you soon!' },
 ];
-const TPL_INFO_DEF = { ora_checkin_loft: '15:00', ora_checkout_loft: '10:00', ora_checkin_suite: '16:00', ora_checkout_suite: '11:00', indirizzo_loft: '', indirizzo_suite: '', wifi_loft: '', wifi_suite: '' };   // orari Loft e Suite dati da Enrico il 2/11
+const TPL_INFO_DEF = { ora_checkin_loft: '15:00', ora_checkout_loft: '10:00', ora_checkin_suite: '16:00', ora_checkout_suite: '11:00', codice_loft: '', codice_suite: '', wifi_loft: '', wifi_suite: '' };   // orari dati da Enrico il 2/11
+// versione nuova dei testi: sostituisce i modelli predefiniti, tiene quelli creati da Enrico
 const TPL = (() => { let d = {}; try { d = JSON.parse(localStorage.getItem('antrum-tpl')) || {}; } catch (e) {}
-  return { lista: Array.isArray(d.lista) ? d.lista : TPL_DEF.map(x => ({ ...x })), info: Object.fromEntries(Object.keys(TPL_INFO_DEF).map(k => [k, (d.info || {})[k] || TPL_INFO_DEF[k]])), lang: d.lang || 'it', b: null }; })();
-function tplSalva() { try { localStorage.setItem('antrum-tpl', JSON.stringify({ lista: TPL.lista, info: TPL.info, lang: TPL.lang })); } catch (e) { toast('Non salvato su questo telefono'); } }
+  const suoi = Array.isArray(d.lista) ? d.lista.filter(x => String(x.id).startsWith('u')) : [];
+  const lista = Array.isArray(d.lista) && d.v === TPL_VER ? d.lista : [...TPL_DEF.map(x => ({ ...x })), ...suoi];
+  return { lista, info: Object.fromEntries(Object.keys(TPL_INFO_DEF).map(k => [k, (d.info || {})[k] || TPL_INFO_DEF[k]])), lang: d.lang || 'it', b: null }; })();
+function tplSalva() { try { localStorage.setItem('antrum-tpl', JSON.stringify({ v: TPL_VER, lista: TPL.lista, info: TPL.info, lang: TPL.lang })); } catch (e) { toast('Non salvato su questo telefono'); } }
 function tplBookings() {
   const oggi = todayIso(), da = addDays(oggi, -10);
   return S.data.bookings.filter(b => b.status === 'confermata' && b.checkin && (b.checkout || b.checkin) >= da).sort((a, b) => a.checkin.localeCompare(b.checkin));
@@ -1626,7 +1650,7 @@ function tplDati(b) {
   return { nome: b ? (b.guest_name || '').trim().split(/\s+/)[0] : '', struttura: b ? PROP[s] || '' : '', arrivo: b ? d(b.checkin) : '', partenza: b ? d(b.checkout) : '',
     notti: n ? n + (en ? (n === 1 ? ' night' : ' nights') : (n === 1 ? ' notte' : ' notti')) : '', ospiti: g ? g + (en ? (g == 1 ? ' guest' : ' guests') : (g == 1 ? ' persona' : ' persone')) : '',
     link_checkin: b ? CHECKIN_URL + '?b=' + b.id : '', importo: b && (b.guest_total ?? b.payout) != null ? eur(b.guest_total ?? b.payout) : '',
-    indirizzo: s ? i['indirizzo_' + s] : '', wifi: s ? i['wifi_' + s] : '', ora_checkin: s ? i['ora_checkin_' + s] : '', ora_checkout: s ? i['ora_checkout_' + s] : '', sito: SITO_URL };
+    codice: s ? i['codice_' + s] : '', wifi: s ? i['wifi_' + s] : '', guida: GUIDA_URL, ora_checkin: s ? i['ora_checkin_' + s] : '', ora_checkout: s ? i['ora_checkout_' + s] : '', sito: SITO_URL };
 }
 // testo finale (per copiare) e anteprima (con i campi mancanti evidenziati)
 function tplTesto(t, b, html) {
@@ -1637,13 +1661,13 @@ function tplTesto(t, b, html) {
 function viewMsg() {
   const lista = tplBookings(), b = TPL.b && S.data.bookings.find(x => x.id === TPL.b);
   const top = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Messaggi</h1></div>
-    <button class="iconbtn" aria-label="Orari, indirizzi e WiFi" onclick="tplInfo()">${ic('home', 18)}</button></div>
+    <button class="iconbtn" aria-label="Orari, codici e WiFi" onclick="tplInfo()">${ic('home', 18)}</button></div>
     <div class="seg" style="margin-top:12px"><button aria-pressed="${TPL.lang === 'it'}" onclick="TPL.lang='it';tplSalva();render()">Italiano</button><button aria-pressed="${TPL.lang === 'en'}" onclick="TPL.lang='en';tplSalva();render()">English</button></div></header>`;
   const chip = x => `<button class="tplb" aria-pressed="${TPL.b === x.id}" onclick="TPL.b=TPL.b==='${x.id}'?null:'${x.id}';render()"><b>${esc((x.guest_name || 'Ospite').split(/\s+/)[0])}</b><span>${PROP[x.property] || ''} · ${dLabel(x.checkin)}</span></button>`;
   const ospite = `<div class="small muted" style="font-weight:700;margin:2px 4px 8px">PER CHI</div><div class="tplbs">${lista.length ? lista.map(chip).join('') : '<span class="small muted">Nessuna prenotazione in arrivo</span>'}</div>
     ${b ? '' : '<div class="small muted" style="margin:8px 4px 0">Scegli un ospite: nome, date e link si compilano da soli.</div>'}`;
-  const card = (t, k) => `<div class="card stack" style="gap:10px">
-    <div class="between"><b>${esc(t.t)}</b><button class="tplmod" onclick="tplModifica(${k})">Modifica</button></div>
+  const card = (t, k) => b && t.s && t.s !== b.property ? '' : `<div class="card stack" style="gap:10px">
+    <div class="between"><b>${esc(t.t)}${t.s && !b ? ` <span class="tplsolo">solo ${PROP[t.s]}</span>` : ''}</b><button class="tplmod" onclick="tplModifica(${k})">Modifica</button></div>
     <div class="tpltxt">${tplTesto(t, b, true)}</div>
     <div class="grid2"><button class="btn" style="height:42px;font-size:14px" onclick="tplCopia(${k})">Copia</button>
     ${b && b.guest_phone ? `<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1E8A4C;height:42px;font-size:14px" href="${esc(waLink(b, tplTesto(t, b)))}" target="_blank" rel="noopener">WhatsApp</a>`
@@ -1655,12 +1679,13 @@ function tplCorrente(k) { return tplTesto(TPL.lista[k], TPL.b && S.data.bookings
 async function tplCopia(k) { try { await navigator.clipboard.writeText(tplCorrente(k)); toast('Messaggio copiato'); } catch (e) { condividi(tplCorrente(k)); } }
 function tplCondividi(k) { return condividi(tplCorrente(k)); }
 function tplModifica(k) {
-  const t = k >= 0 ? TPL.lista[k] : { t: '', it: '', en: '' }, def = k >= 0 && TPL_DEF.find(x => x.id === t.id);
+  const t = k >= 0 ? TPL.lista[k] : { t: '', it: '', en: '', s: '' }, def = k >= 0 && TPL_DEF.find(x => x.id === t.id);
   sheet(sheetHead(k >= 0 ? 'Modifica messaggio' : 'Nuovo messaggio') + `<div class="stack" style="gap:14px">
     <label class="field">Titolo<input id="tp_t" value="${esc(t.t)}" placeholder="Es. Parcheggio"></label>
+    <label class="field">Per<select id="tp_s"><option value="">Loft e Suite</option><option value="loft"${t.s === 'loft' ? ' selected' : ''}>Solo Loft</option><option value="suite"${t.s === 'suite' ? ' selected' : ''}>Solo Suite</option></select></label>
     <label class="field">Testo italiano<textarea id="tp_it" style="height:150px">${esc(t.it || '')}</textarea></label>
     <label class="field">Testo inglese<textarea id="tp_en" style="height:150px">${esc(t.en || '')}</textarea></label>
-    <div class="small muted">Campi automatici: ${['nome', 'struttura', 'arrivo', 'partenza', 'notti', 'ospiti', 'link_checkin', 'importo', 'indirizzo', 'wifi', 'ora_checkin', 'ora_checkout', 'sito'].map(x => `<button class="tplcampo" onclick="tplIns('{${x}}')">{${x}}</button>`).join(' ')}</div>
+    <div class="small muted">Campi automatici: ${['nome', 'struttura', 'arrivo', 'partenza', 'notti', 'ospiti', 'link_checkin', 'importo', 'codice', 'wifi', 'guida', 'ora_checkin', 'ora_checkout', 'sito'].map(x => `<button class="tplcampo" onclick="tplIns('{${x}}')">{${x}}</button>`).join(' ')}</div>
     <button class="btn" onclick="tplSalvaUno(${k})">Salva</button>
     ${def ? `<button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="tplRipristina(${k})">Ripristina testo originale</button>` : ''}
     ${k >= 0 ? `<button class="btn" style="background:#fff;color:var(--red-d);border:1px solid var(--line)" onclick="tplElimina(${k})">Elimina</button>` : ''}</div>`);
@@ -1671,9 +1696,9 @@ function tplIns(x) {
   a.value = a.value.slice(0, p) + x + a.value.slice(a.selectionEnd ?? p); a.focus(); a.selectionStart = a.selectionEnd = p + x.length;
 }
 function tplSalvaUno(k) {
-  const t = $('#tp_t').value.trim(), it = $('#tp_it').value.trim(), en = $('#tp_en').value.trim();
+  const s = $('#tp_s').value, t = $('#tp_t').value.trim(), it = $('#tp_it').value.trim(), en = $('#tp_en').value.trim();
   if (!t || !(it || en)) return toast('Scrivi titolo e testo');
-  if (k >= 0) Object.assign(TPL.lista[k], { t, it, en }); else TPL.lista.push({ id: 'u' + Date.now(), t, it, en });
+  if (k >= 0) Object.assign(TPL.lista[k], { t, it, en, s }); else TPL.lista.push({ id: 'u' + Date.now(), t, it, en, s });
   tplSalva(); closeSheet(); render(); toast('Messaggio salvato');
 }
 function tplRipristina(k) { const d = TPL_DEF.find(x => x.id === TPL.lista[k].id); if (!d) return; TPL.lista[k] = { ...d }; tplSalva(); closeSheet(); render(); toast('Testo originale ripristinato'); }
@@ -1681,11 +1706,11 @@ function tplElimina(k) { if (!confirm('Eliminare questo messaggio?')) return; TP
 function tplInfo() {
   const i = TPL.info, f = (k, l, ph) => `<label class="field">${l}<input id="ti_${k}" value="${esc(i[k] || '')}" placeholder="${ph}"></label>`;
   sheet(sheetHead('Dati per i messaggi') + `<div class="stack" style="gap:14px">
-    <div class="small muted">Si inseriscono da soli nei messaggi, in base alla struttura dell'ospite. Restano salvati solo su questo telefono.</div>
+    <div class="small muted">Si inseriscono da soli nei messaggi, in base alla struttura dell'ospite. Restano salvati solo su questo telefono: codici e WiFi non vanno mai online.</div>
     <b>Loft</b><div class="grid2">${f('ora_checkin_loft', 'Check-in dalle', '15:00')}${f('ora_checkout_loft', 'Check-out entro', '10:00')}</div>
-    ${f('indirizzo_loft', 'Indirizzo Loft', 'Via …, Salerno')}${f('wifi_loft', 'WiFi Loft', 'Rete · password')}
+    ${f('codice_loft', 'Codice locker Loft', 'Codice')}${f('wifi_loft', 'WiFi Loft', 'Rete … · Password …')}
     <b>Suite</b><div class="grid2">${f('ora_checkin_suite', 'Check-in dalle', '16:00')}${f('ora_checkout_suite', 'Check-out entro', '11:00')}</div>
-    ${f('indirizzo_suite', 'Indirizzo Suite', 'Via …, Salerno')}${f('wifi_suite', 'WiFi Suite', 'Rete · password')}
+    ${f('codice_suite', 'Codice locker Suite', 'Codice')}${f('wifi_suite', 'WiFi Suite', 'Rete … · Password …')}
     <button class="btn" onclick="tplSalvaInfo()">Salva</button></div>`);
 }
 function tplSalvaInfo() { Object.keys(TPL_INFO_DEF).forEach(k => TPL.info[k] = $('#ti_' + k).value.trim()); tplSalva(); closeSheet(); render(); toast('Dati salvati'); }
