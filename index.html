@@ -220,7 +220,7 @@ const PROP = { loft: 'Loft', suite: 'Suite' };
 const CANALE = { airbnb: 'Airbnb', booking: 'Booking', diretta: 'Diretta' };
 // Booking non manda l'importo: stima 95 € a notte finché non lo validi tu
 const STIMA_NOTTE_BOOKING = 95;
-const stima = b => b && b.status === 'confermata' && b.source === 'booking' && b.payout == null && b.checkout ? diffDays(b.checkin, b.checkout) * STIMA_NOTTE_BOOKING : null;
+const stima = b => null;   // Booking: niente più stima a 95 €/notte (Enrico, 1/11/2026): l'importo resta da inserire, lui scrive il lordo e l'app calcola il netto
 const importo = b => b.payout ?? stima(b);
 const daValidare = () => S.data.bookings.filter(b => stima(b) != null);
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
@@ -299,7 +299,7 @@ const isManual = b => b.source === 'diretta' || (b.manual && !b.email_id);
 // prenotazione nata su Booking e poi trasformata in diretta (tiene il numero Booking come codice)
 const exBooking = b => b.source === 'diretta' && /^\d{6,12}$/.test(String(b.code || ''));
 // Ritenuta fiscale Airbnb (cedolare 21%): valore esatto dalla mail di pagamento, altrimenti stima 22% di (incasso − tassa)
-const ritenuta = b => b.source !== 'airbnb' || !(+b.payout > 0) ? 0 : b.withholding != null ? +b.withholding : Math.round((+b.payout - (+b.tourist_tax || 0)) * 22) / 100;
+const ritenuta = b => !(+b.payout > 0) ? 0 : b.withholding != null ? +b.withholding : b.source !== 'airbnb' ? 0 : Math.round((+b.payout - (+b.tourist_tax || 0)) * 22) / 100;   // Booking: cedolare calcolata dal lordo
 const ritStimata = b => b.source === 'airbnb' && +b.payout > 0 && b.withholding == null;
 const colorOf = b => isManual(b) ? CH_COL.diretta : CH_COL[b.source];
 const pul = b => +(b.cleaning_cost ?? 20);   // solo pulizia
@@ -728,7 +728,7 @@ function movements(r) {
     if (!inR(b.checkin, r)) return;
     if (b.status === 'confermata') out.push({ d: b.checkin, kind: 'in', b, t: 'Prenotazione · ' + (isManual(b) ? 'Manuale' : CANALE[b.source]), s: `${PROP[b.property] || '?'} · ${esc(b.guest_name || 'ospite')}${b.checkout ? ' · ' + diffDays(b.checkin, b.checkout) + ' notti' : ''}`, a: importo(b), stim: stima(b) != null, missing: importo(b) == null || !b.checkout, color: colorOf(b) });
     else if (+b.payout > 0) out.push({ d: b.checkin, kind: 'in', b, t: 'Penale cancellazione', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: b.payout, color: '#9AA3AD' });
-    if (ritenuta(b) > 0) out.push({ d: b.checkin, kind: 'out', b, t: 'Ritenuta fiscale Airbnb 21%', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: ritenuta(b), color: '#6B5B95', auto: ritStimata(b) ? 'STIMA' : 'AIRBNB' });
+    if (ritenuta(b) > 0) out.push({ d: b.checkin, kind: 'out', b, t: 'Ritenuta fiscale ' + (CANALE[b.source] || 'Airbnb') + ' 21%', s: `${PROP[b.property]} · ${esc(b.guest_name || '')}`, a: ritenuta(b), color: '#6B5B95', auto: ritStimata(b) ? 'STIMA' : b.source === 'booking' ? 'BOOKING' : 'AIRBNB' });
   });
   S.data.bookings.filter(b => b.status === 'confermata' && inR(b.checkout, r)).forEach(b =>
     out.push({ d: b.checkout, kind: 'out', b, t: 'Pulizia + biancheria', s: `${PROP[b.property]} · check-out ${esc(b.guest_name || '')}`, a: clean(b), color: '#1C6E85', auto: 'AUTO' }));
@@ -1082,7 +1082,9 @@ function openBooking(id, nuova) {
     ${b.status === 'confermata' ? ckBlock(b) : ''}
     <details class="card" ${b.payout == null || !b.checkout ? 'open' : ''}><summary style="font-weight:700;cursor:pointer;min-height:24px">Modifica prenotazione</summary>
     <div class="stack" style="margin-top:14px">
-      <label class="field">Importo incassato<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.payout != null ? String(b.payout).replace('.', ',') : ''}" placeholder="0,00"></div></label>
+      ${b.source === 'booking' ? `<label class="field">Prezzo lordo Booking (quello pagato dall'ospite)<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.guest_total != null ? String(b.guest_total).replace('.', ',') : ''}" placeholder="0,00" oninput="nettoBooking()"></div></label>
+      <div id="f_net" class="small" style="margin-top:-6px;line-height:1.5"></div>`
+      : `<label class="field">Importo incassato<div class="money"><span>€</span><input id="f_amt" inputmode="decimal" value="${b.payout != null ? String(b.payout).replace('.', ',') : ''}" placeholder="0,00"></div></label>`}
       <div class="grid2"><label class="field">Check-in<input id="f_in" type="date" value="${b.checkin}"></label><label class="field">Check-out<input id="f_out" type="date" value="${b.checkout || ''}"></label></div>
       <div class="grid2"><label class="field">Struttura${propSel(b.property)}</label><label class="field">Ospiti<input id="f_guests" inputmode="numeric" value="${b.guests ?? ''}"></label></div>
       <div class="grid2"><label class="field">Nome ospite<input id="f_name" value="${esc(b.guest_name || '')}"></label><label class="field">Telefono<input id="f_tel" type="tel" inputmode="tel" value="${esc(b.guest_phone || '')}" placeholder="+39 …"></label></div>
@@ -1092,6 +1094,16 @@ function openBooking(id, nuova) {
     </div></details>
     </div>`, true);   // scheda del soggiorno: a schermo intero
   if (b.status === 'confermata' && b.checkin_url && ckStato(b) !== 'attesa') caricaCkDati(b);
+  if (b.source === 'booking') nettoBooking();
+}
+// Booking: Enrico scrive il lordo (prezzo pagato dall'ospite), l'app calcola il netto come nel simulatore
+// (commissione 18%, transazione 1,5%, IVA 22% su entrambe, cedolare 21%: verificato sul pagamento del 3/9, 215,10 → 118,75)
+function nettoBooking() {
+  const el = $('#f_net'); if (!el) return;
+  const v = num($('#f_amt').value);
+  if (!(v > 0)) { el.innerHTML = '<span class="muted">Scrivi il totale pagato dall\'ospite su Booking: calcolo io quanto ti resta.</span>'; return; }
+  const r = simCalc(v, 'booking');
+  el.innerHTML = `Ti resta <b style="color:var(--green-d)">${eur(r.netto)}</b><br><span class="muted">commissione ${eur(r.comm)} · transazione ${eur(r.fee)} · IVA ${eur(r.iva)} · cedolare 21% ${eur(r.rit)}</span>`;
 }
 // stato check-in Questura: null → ricevuto (ospite ha compilato) → inviato (schedine in Questura)
 const dtLabel = ts => { const d = new Date(ts); return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
@@ -1293,6 +1305,13 @@ async function saveBooking(id) {
   const upd = { payout: amt === '' ? null : num(amt), checkin: $('#f_in').value, checkout: $('#f_out').value || null, property: $('#f_prop').value,
     guests: $('#f_guests').value ? +$('#f_guests').value : null, guest_name: $('#f_name').value.trim() || null, guest_phone: $('#f_tel').value.trim() || null, note: $('#f_note').value.trim() || null };
   if (upd.checkout && upd.checkout <= upd.checkin) return toast('Il check-out deve essere dopo il check-in');
+  const bk = S.data.bookings.find(x => x.id === id);
+  if (bk && bk.source === 'booking') {   // il campo è il lordo: salvo lordo, incassato (dopo commissioni) e cedolare, come per Airbnb
+    const lordo = upd.payout, r = lordo > 0 ? simCalc(lordo, 'booking') : null;
+    upd.guest_total = r ? lordo : null;
+    upd.payout = r ? Math.round((lordo - r.comm - r.fee - r.iva) * 100) / 100 : null;
+    upd.withholding = r ? r.rit : null;
+  }
   const { error } = await sb.from('bookings').update(upd).eq('id', id);
   if (error) return toast('Non salvato: ' + error.message);
   Object.assign(S.data.bookings.find(b => b.id === id), upd);
