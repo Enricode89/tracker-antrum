@@ -1611,9 +1611,9 @@ const TPL_DEF = [
     it: 'Ciao {nome}, la prossima volta puoi prenotare direttamente dal nostro sito, con disponibilità e prezzi sempre aggiornati:\n{sito}\nTi aspettiamo!',
     en: 'Hi {nome}, next time you can book directly on our website, with up-to-date availability and prices:\n{sito}\nSee you soon!' },
 ];
-const TPL_INFO_DEF = { ora_checkin: '', ora_checkout: '', indirizzo_loft: '', indirizzo_suite: '', wifi_loft: '', wifi_suite: '' };
+const TPL_INFO_DEF = { ora_checkin_loft: '15:00', ora_checkout_loft: '10:00', ora_checkin_suite: '16:00', ora_checkout_suite: '11:00', indirizzo_loft: '', indirizzo_suite: '', wifi_loft: '', wifi_suite: '' };   // orari Loft e Suite dati da Enrico il 2/11
 const TPL = (() => { let d = {}; try { d = JSON.parse(localStorage.getItem('antrum-tpl')) || {}; } catch (e) {}
-  return { lista: Array.isArray(d.lista) ? d.lista : TPL_DEF.map(x => ({ ...x })), info: { ...TPL_INFO_DEF, ...(d.info || {}) }, lang: d.lang || 'it', b: null }; })();
+  return { lista: Array.isArray(d.lista) ? d.lista : TPL_DEF.map(x => ({ ...x })), info: Object.fromEntries(Object.keys(TPL_INFO_DEF).map(k => [k, (d.info || {})[k] || TPL_INFO_DEF[k]])), lang: d.lang || 'it', b: null }; })();
 function tplSalva() { try { localStorage.setItem('antrum-tpl', JSON.stringify({ lista: TPL.lista, info: TPL.info, lang: TPL.lang })); } catch (e) { toast('Non salvato su questo telefono'); } }
 function tplBookings() {
   const oggi = todayIso(), da = addDays(oggi, -10);
@@ -1626,7 +1626,7 @@ function tplDati(b) {
   return { nome: b ? (b.guest_name || '').trim().split(/\s+/)[0] : '', struttura: b ? PROP[s] || '' : '', arrivo: b ? d(b.checkin) : '', partenza: b ? d(b.checkout) : '',
     notti: n ? n + (en ? (n === 1 ? ' night' : ' nights') : (n === 1 ? ' notte' : ' notti')) : '', ospiti: g ? g + (en ? (g == 1 ? ' guest' : ' guests') : (g == 1 ? ' persona' : ' persone')) : '',
     link_checkin: b ? CHECKIN_URL + '?b=' + b.id : '', importo: b && (b.guest_total ?? b.payout) != null ? eur(b.guest_total ?? b.payout) : '',
-    indirizzo: s ? i['indirizzo_' + s] : '', wifi: s ? i['wifi_' + s] : '', ora_checkin: i.ora_checkin, ora_checkout: i.ora_checkout, sito: SITO_URL };
+    indirizzo: s ? i['indirizzo_' + s] : '', wifi: s ? i['wifi_' + s] : '', ora_checkin: s ? i['ora_checkin_' + s] : '', ora_checkout: s ? i['ora_checkout_' + s] : '', sito: SITO_URL };
 }
 // testo finale (per copiare) e anteprima (con i campi mancanti evidenziati)
 function tplTesto(t, b, html) {
@@ -1682,8 +1682,9 @@ function tplInfo() {
   const i = TPL.info, f = (k, l, ph) => `<label class="field">${l}<input id="ti_${k}" value="${esc(i[k] || '')}" placeholder="${ph}"></label>`;
   sheet(sheetHead('Dati per i messaggi') + `<div class="stack" style="gap:14px">
     <div class="small muted">Si inseriscono da soli nei messaggi, in base alla struttura dell'ospite. Restano salvati solo su questo telefono.</div>
-    <div class="grid2">${f('ora_checkin', 'Check-in dalle', '15:00')}${f('ora_checkout', 'Check-out entro', '10:30')}</div>
+    <b>Loft</b><div class="grid2">${f('ora_checkin_loft', 'Check-in dalle', '15:00')}${f('ora_checkout_loft', 'Check-out entro', '10:00')}</div>
     ${f('indirizzo_loft', 'Indirizzo Loft', 'Via …, Salerno')}${f('wifi_loft', 'WiFi Loft', 'Rete · password')}
+    <b>Suite</b><div class="grid2">${f('ora_checkin_suite', 'Check-in dalle', '16:00')}${f('ora_checkout_suite', 'Check-out entro', '11:00')}</div>
     ${f('indirizzo_suite', 'Indirizzo Suite', 'Via …, Salerno')}${f('wifi_suite', 'WiFi Suite', 'Rete · password')}
     <button class="btn" onclick="tplSalvaInfo()">Salva</button></div>`);
 }
