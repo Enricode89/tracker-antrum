@@ -956,10 +956,10 @@ function apriInterno(url, titolo, bid) {
   S.webBid = bid || null;
   document.body.insertAdjacentHTML('beforeend', `<div id="web" class="web" role="dialog" aria-label="${esc(titolo)}"><div class="webbar">
     <button class="iconbtn" aria-label="Indietro" onclick="chiudiInterno()">${ic('left', 18)}</button><b style="flex:1;min-width:0">${esc(titolo)}</b></div>
-    <iframe id="webf" ${/[?&]a=conferma/.test(url) ? '' : `src="${esc(url)}"`} title="${esc(titolo)}"></iframe></div>`);
+    <iframe id="webf" ${/[?&]a=(conferma|ricevuta)/.test(url) ? '' : `src="${esc(url)}"`} title="${esc(titolo)}"></iframe></div>`);
   document.body.style.overflow = 'hidden';
   try { history.pushState({ web: 1 }, ''); } catch (e) {}
-  if (/[?&]a=conferma/.test(url)) caricaInterno(url);   // pagina Questura: arriva come dati e si mostra qui dentro
+  if (/[?&]a=(conferma|ricevuta)/.test(url)) caricaInterno(url);   // pagina Questura e ricevute: arrivano come dati e si mostrano qui dentro
 }
 async function caricaInterno(url) {
   const f = $('#webf'), msg = t => `<p style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:28px 20px;color:#5E6670;font-size:16px">${t}</p>`;
@@ -1118,6 +1118,11 @@ function nettoBooking() {
 }
 // stato check-in Questura: null → ricevuto (ospite ha compilato) → inviato (schedine in Questura)
 const dtLabel = ts => { const d = new Date(ts); return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); };
+// ricevuta dell'invio in Questura: stessa firma del link di conferma, pagina diversa (archivio sempre consultabile)
+function apriRicevuta(id) {
+  const b = S.data.bookings.find(x => x.id === id);
+  if (b && b.checkin_url) apriInterno(b.checkin_url.replace(/([?&]a=)conferma/, '$1ricevuta'), 'Ricevuta Questura · ' + (b.guest_name || 'Ospite'), b.id);
+}
 function ckStato(b) { return b.checkin_sent_at ? 'inviato' : b.checkin_received_at ? 'ricevuto' : 'attesa'; }
 // dati ricevuti ma non ancora inviati: la Questura va avvisata entro 24 ore dall'arrivo
 function ckUrgenza(b) {
@@ -1241,14 +1246,21 @@ function ckContenuto() {
         <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line);height:42px;font-size:14px" onclick="copiaCheckin('${b.id}')">Copia link</button></div>` : ''}
       ${st === 'ricevuto' && b.checkin_url ? (b.checkin <= todayIso() ? `<a class="btn green" style="display:flex;align-items:center;justify-content:center;text-decoration:none;height:42px;font-size:14px" href="${esc(b.checkin_url)}" onclick="apriInterno(this.href,'Invio alla Questura','${b.id}');return false">Rivedi e invia alla Questura</a>`
         : `<div class="small muted" style="text-align:center">Si può inviare dal ${dLabel(b.checkin)}</div>`) : ''}
-      ${st === 'inviato' ? `<div class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</div>` : ''}</div>`;
+      ${st === 'inviato' ? `<div class="between" style="gap:8px"><span class="small muted">Inviato il ${dtLabel(b.checkin_sent_at)} · ${b.checkin_guests || b.guests || '?'} ospiti</span>${b.checkin_url ? `<button style="border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;font-weight:700;font-size:13px;flex-shrink:0" onclick="apriRicevuta('${b.id}')">${ic('receipt', 14)} Ricevuta</button>` : ''}</div>` : ''}</div>`;
   };
   const sez = (t, l, vuoto) => `<h2 style="font-size:15px;margin:18px 4px 8px">${t}</h2><div class="stack" style="gap:8px">${l.length ? l.map(card).join('') : `<div class="empty">${vuoto}</div>`}</div>`;
   let html = `<section><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${box('dafare', inv.length + att.length, 'Da fare', 'var(--amber-t)', 'var(--amber-d)')}${box('inviati', ok.length, 'Inviati', 'var(--green-t)', 'var(--green-d)')}${box('tutti', all.length, 'Tutti', '#fff', 'var(--ink)')}</div>`;
+  const arch = S.data.bookings.filter(b => b.checkin_sent_at).sort((a, b) => b.checkin_sent_at.localeCompare(a.checkin_sent_at));   // archivio: tutti gli invii in Questura, da sempre
+  html += `<button class="card mt" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;text-align:left;${f === 'archivio' ? 'box-shadow:inset 0 0 0 2px var(--ink)' : ''}" onclick="apriCk('archivio')">${ic('receipt', 20)}<span style="flex:1"><b>Archivio check-in e ricevute</b><br><span class="small muted">${arch.length} ${arch.length === 1 ? 'invio' : 'invii'} in Questura</span></span>${ic('right', 18)}</button>`;
   const urg = inv.filter(b => ckUrgenza(b));
   if (urg.length) html += `<button class="alert mt" style="background:var(--red-t);color:var(--red-d)" onclick="apriCk('dafare')">${ic('alert')}<span style="flex:1"><b>${urg.length} check-in ${urg.length > 1 ? 'compilati' : 'compilato'}, non ancora ${urg.length > 1 ? 'inviati' : 'inviato'} in Questura</b> · ${urg.some(b => ckUrgenza(b) === 'ritardo') ? 'uno è oltre le 24 ore' : 'da inviare entro 24 ore dall\'arrivo'}</span><b>Vedi</b></button>`;
   if (f === 'dafare') html += sez('Da inviare alla Questura', inv, 'Niente da inviare') + sez('In attesa dei dati dell\'ospite', att, 'Tutti gli ospiti hanno compilato');
   else if (f === 'inviati') html += sez('Inviati in Questura', ok, 'Nessun invio negli ultimi 30 giorni');
+  else if (f === 'archivio') {
+    if (!arch.length) html += sez('Archivio', [], 'Nessun check-in inviato');
+    const mesi = [...new Set(arch.map(b => b.checkin_sent_at.slice(0, 7)))];
+    mesi.forEach(m => { html += sez(MESI[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4), arch.filter(b => b.checkin_sent_at.slice(0, 7) === m), ''); });
+  }
   else html += sez('Tutte le prenotazioni', [...all].sort((a, b) => a.checkin.localeCompare(b.checkin)), 'Nessuna prenotazione in arrivo');
   return html + '</section>';
 }
