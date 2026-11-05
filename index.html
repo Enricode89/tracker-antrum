@@ -1815,6 +1815,8 @@ async function start(giaMostrato) {
 }
 // app riaperta dopo un po' (era in background): aggiorno in silenzio
 document.addEventListener('visibilitychange', async () => {
+  // app riaperta dal background: controllo subito se c'è una versione nuova (iPhone non lo fa da solo)
+  if (document.visibilityState === 'visible' && 'serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
   if (document.visibilityState !== 'visible' || !S.caricato || Date.now() - S.caricato < 60000 || $('.login')) return;
   const prima = JSON.stringify(S.data);
   try { await loadData(); if (JSON.stringify(S.data) !== prima && !$('#ov')) render(); } catch (e) { /* riprovo alla prossima */ }
