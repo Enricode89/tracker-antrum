@@ -342,15 +342,16 @@ function apriDaLink() {
   if (S.data.bookings.some(b => b.id === id)) openBooking(id);
 }
 async function loadData() {
-  const [b, e, f, a] = await Promise.all([
+  const [b, e, f, a, pp] = await Promise.all([
     sb.from('bookings').select('*').order('checkin'),
     sb.from('expenses').select('*').order('date'),
     sb.from('fixed_expenses').select('*').order('property'),
     sb.from('adjustments').select('*'),
+    sb.from('papa_spese').select('*').order('date', { nullsFirst: true }),
   ]);
   const err = b.error || e.error || f.error || a.error;
   if (err) throw err;
-  S.data = { bookings: b.data, expenses: e.data, fixed: f.data, adj: a.data };
+  S.data = { bookings: b.data, expenses: e.data, fixed: f.data, adj: a.data, papa: pp.error ? [] : pp.data };
   S.caricato = Date.now();
   salvaCache();
 }
@@ -763,6 +764,7 @@ function viewMov() {
   const totIn = list.filter(x => x.kind === 'in').reduce((s, x) => s + (+x.a || 0), 0), totOut = list.filter(x => x.kind === 'out').reduce((s, x) => s + (+x.a || 0), 0);
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.movFilter='${k}';render()">${l}</button>`;
   let html = header('Movimenti', false, true) + `<div class="chips">${chip('tutti', 'Tutti')}${chip('entrate', 'Entrate')}${chip('uscite', 'Uscite')}${chip('completare', 'Da completare')}
+    <button class="chip" style="background:#FFF4D6;border-color:#F2D58A;color:#6B4E00" onclick="go('papa')">👴 Spese papà${papaAperto() ? ' · ' + eur(papaAperto()) : ''}</button>
     <button class="chip" onclick="go('fisse')">${ic('repeat', 14)} Spese fisse</button>
     <button class="chip" onclick="go('per')">${ic('trend', 14)} Analisi periodo</button></div>
     ${f !== 'completare' ? `<div class="grid2 mt"><div class="card" style="padding:14px 16px"><div class="small muted" style="font-weight:700">Entrate</div><div style="font-size:20px;font-weight:800;color:var(--green-d)">${eur(totIn)}</div></div>
@@ -779,6 +781,109 @@ function viewMov() {
       <span class="amt ${x.stim ? 'stim' : x.kind === 'in' ? 'plus' : 'minus'}">${x.a == null ? '—' : (x.stim ? '~ ' : x.kind === 'in' ? '+ ' : '− ') + eur(x.a)}</span></button>`;
   });
   return html + '</div></div>';
+}
+
+// ---------------- Spese papà (Enrico, 7/11/2026) ----------------
+// Spese anticipate da papà: si restituiscono tutte insieme con "Pagato". Pulizie e biancheria (Biinish, Urtin)
+// sono già nel bilancio dalle pulizie automatiche: qui servono solo per il conto con papà, mai come nuova spesa.
+const PAPA_TIPO = { spesa: 'Spesa', pulizie: 'Pulizie/biancheria', lavori: 'Lavori' };
+const papaList = () => (S.data && S.data.papa) || [];
+const papaAperto = (lav) => papaList().filter(x => !x.paid_at && (lav ? x.kind === 'lavori' : x.kind !== 'lavori')).reduce((s, x) => s + (+x.amount || 0), 0);
+function viewPapa() {
+  const f = S.papaF || 'aperte', ap = papaList().filter(x => !x.paid_at && x.kind !== 'lavori'), lav = papaList().filter(x => x.kind === 'lavori');
+  const lavAp = lav.filter(x => !x.paid_at), tot = papaAperto(), totLav = papaAperto(true);
+  const dd = s => { if (!s) return ''; const d = parse(s); return d.getUTCDate() + ' ' + MESI_B[d.getUTCMonth()]; };
+  const riga = x => `<button class="item" onclick="openPapa('${x.id}')"><span class="dot" style="background:${x.kind === 'pulizie' ? '#2F6FD1' : x.kind === 'lavori' ? '#8A5A00' : 'var(--red)'}"></span>
+    <div style="flex:1;min-width:0"><div class="t">${esc(x.descr)}</div><div class="s">${[dd(x.date), PAPA_TIPO[x.kind], x.property === 'entrambe' ? '' : PROP[x.property]].filter(Boolean).join(' · ')}${x.kind === 'pulizie' ? ' <span class="badge" style="background:#EEF0EC;color:var(--muted)">già nelle pulizie</span>' : ''}</div></div>
+    <span class="amt minus">${eur(+x.amount)}</span></button>`;
+  const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.papaF='${k}';render()">${l}</button>`;
+  let html = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Spese papà</h1></div>
+    <div class="row" style="gap:8px"><button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova spesa papà" onclick="openPapa()">${ic('plus', 20, 2.6)}</button></div></div></header>
+    <div class="chips"><button class="chip" onclick="go('mov')">${ic('left', 14)} Movimenti</button>${chip('aperte', 'Da saldare')}${chip('saldati', 'Saldati')}${chip('lavori', 'Lavori')}</div>`;
+  if (f === 'aperte') {
+    const dal = ap.map(x => x.date).filter(Boolean).sort()[0];
+    html += `<div class="card mt" style="background:var(--ink);color:#fff;padding:18px">
+      <div class="small" style="opacity:.75;font-weight:700">Da restituire a papà</div>
+      <div style="font-size:34px;font-weight:800;margin:2px 0">${eur(tot)}</div>
+      <div class="small" style="opacity:.75">${ap.length ? ap.length + (ap.length === 1 ? ' spesa' : ' spese') + (dal ? ' dal ' + dd(dal) : '') : 'Tutto saldato'}</div>
+      ${ap.length ? `<button style="margin-top:14px;width:100%;height:48px;border:0;border-radius:14px;background:#fff;color:var(--ink);font-weight:800;font-size:16px" onclick="chiediPagaPapa()">✓ Pagato · salda ${eur(tot)}</button>` : ''}</div>`;
+    html += ap.length ? `<div class="daylab">Da saldare</div><div class="list">${ap.map(riga).join('')}</div>` : '<div class="empty">Nessuna spesa da restituire</div>';
+    if (totLav) html += `<button class="card mt" style="width:100%;text-align:left;border:0;padding:14px 16px" onclick="S.papaF='lavori';render()"><div class="between"><div><div class="t" style="font-weight:800">Lavori · Portone Loft</div><div class="small muted">${lavAp.length} voci da saldare</div></div><b>${eur(totLav)}</b></div></button>`;
+  } else if (f === 'saldati') {
+    const sald = papaList().filter(x => x.paid_at && x.kind !== 'lavori'), date = [...new Set(sald.map(x => x.paid_at))].sort().reverse();
+    if (!date.length) html += '<div class="empty">Nessun saldo ancora</div>';
+    date.forEach(d => { const g = sald.filter(x => x.paid_at === d);
+      html += `<details class="card mt" style="padding:12px 16px"><summary class="between" style="cursor:pointer;list-style:none"><div><div class="t" style="font-weight:800">Saldato il ${dd(d)}</div><div class="small muted">${g.length} spese</div></div><b>${eur(g.reduce((s, x) => s + +x.amount, 0))}</b></summary>
+        <div class="list" style="margin-top:8px;box-shadow:none;padding:0">${g.map(riga).join('')}</div></details>`; });
+  } else {
+    html += `<div class="card mt" style="padding:16px"><div class="small muted" style="font-weight:700">Lavori pagati da papà · da restituire</div><div style="font-size:28px;font-weight:800">${eur(totLav)}</div>
+      ${lavAp.length ? `<button class="btn" style="margin-top:12px" onclick="chiediPagaPapa(1)">✓ Pagato · salda ${eur(totLav)}</button>` : '<div class="small muted">Tutto saldato</div>'}</div>
+      <div class="list mt">${lav.map(x => riga(x).replace('<span class="amt minus">', x.paid_at ? '<span class="amt" style="color:var(--muted)">' : '<span class="amt minus">')).join('')}</div>`;
+  }
+  return html;
+}
+function openPapa(id) {
+  const x = id ? papaList().find(e => e.id === id) : { date: todayIso(), descr: '', amount: '', property: 'entrambe', kind: 'spesa', note: '' };
+  sheet(sheetHead(id ? 'Spesa papà' : 'Nuova spesa papà') + `<div class="stack">
+    <label class="field">Cosa<input id="p_descr" value="${esc(x.descr)}" placeholder="Es. lenzuola, detersivi, Urtin…"></label>
+    <label class="field">Importo<div class="money" style="border-color:var(--red)"><span style="color:var(--red)">€</span><input id="p_amt" inputmode="decimal" value="${x.amount === '' ? '' : String(x.amount).replace('.', ',')}"></div></label>
+    <div class="grid2"><label class="field">Tipo<select id="p_kind">${Object.entries(PAPA_TIPO).map(([k, l]) => `<option value="${k}" ${k === x.kind ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="field">Data<input id="p_date" type="date" value="${x.date || ''}"></label></div>
+    <label class="field">Struttura${propSel(x.property, true).replace('id="f_prop"', 'id="p_prop"')}</label>
+    <label class="field">Nota<input id="p_note" value="${esc(x.note || '')}"></label>
+    ${id ? '' : `<label class="row" style="gap:10px;font-size:14px"><input type="checkbox" id="p_bil" checked style="width:20px;height:20px"> Aggiungi anche alle spese del bilancio <span class="small muted">(non per pulizie e biancheria: ci sono già)</span></label>`}
+    ${x.paid_at ? `<p class="small muted">Saldata il ${x.paid_at.split('-').reverse().join('/')}</p>` : ''}
+    <button class="btn" onclick="savePapa(${id ? `'${id}'` : ''})">Salva</button>
+    ${id ? `${x.paid_at ? `<button class="btn ghost" onclick="riapriPapa('${id}')">Segna come non pagata</button>` : ''}<button class="btn ghost" onclick="delPapa('${id}')">Elimina</button>` : ''}</div>`);
+}
+async function savePapa(id) {
+  const row = { descr: $('#p_descr').value.trim(), amount: num($('#p_amt').value), kind: $('#p_kind').value, date: $('#p_date').value || null, property: $('#p_prop').value, note: $('#p_note').value.trim() || null };
+  if (!row.descr) return toast('Scrivi cosa ha pagato');
+  if (!row.amount) return toast('Inserisci un importo');
+  if (id) {
+    const { error } = await sb.from('papa_spese').update(row).eq('id', id);
+    if (error) return toast('Non salvata: ' + error.message);
+    Object.assign(papaList().find(e => e.id === id), row);
+  } else {
+    // nel bilancio solo le vere spese: pulizie e biancheria sono già contate dalle pulizie automatiche (niente doppioni)
+    if ($('#p_bil') && $('#p_bil').checked && row.kind !== 'pulizie') {
+      const ex = { amount: row.amount, category: 'spese', date: row.date || todayIso(), property: row.property, note: row.descr + ' (pagata da papà)' };
+      const r = await sb.from('expenses').insert(ex).select();
+      if (r.error) return toast('Non salvata: ' + r.error.message);
+      S.data.expenses.push(r.data[0]); row.expense_id = r.data[0].id;
+    }
+    const { data, error } = await sb.from('papa_spese').insert(row).select();
+    if (error) return toast('Non salvata: ' + error.message);
+    papaList().push(data[0]);
+  }
+  closeSheet(); toast('Spesa papà salvata'); render();
+}
+async function delPapa(id) {
+  const x = papaList().find(e => e.id === id);
+  if (!confirm('Eliminare questa spesa di papà?' + (x && x.expense_id ? ' Verrà tolta anche dalle spese del bilancio.' : ''))) return;
+  if (x && x.expense_id) { await sb.from('expenses').delete().eq('id', x.expense_id); S.data.expenses = S.data.expenses.filter(e => e.id !== x.expense_id); }
+  const { error } = await sb.from('papa_spese').delete().eq('id', id);
+  if (error) return toast('Non eliminata: ' + error.message);
+  S.data.papa = papaList().filter(e => e.id !== id); closeSheet(); toast('Eliminata'); render();
+}
+async function riapriPapa(id) {
+  const { error } = await sb.from('papa_spese').update({ paid_at: null }).eq('id', id);
+  if (error) return toast('Non salvata: ' + error.message);
+  papaList().find(e => e.id === id).paid_at = null; closeSheet(); toast('Di nuovo da saldare'); render();
+}
+function chiediPagaPapa(lav) {
+  const tot = papaAperto(lav);
+  sheet(sheetHead('Saldo a papà') + `<div class="stack"><p style="font-size:16px">Hai dato a papà <b>${eur(tot)}</b>${lav ? ' per i lavori' : ''}?</p>
+    <label class="field">Data del pagamento<input id="p_paid" type="date" value="${todayIso()}"></label>
+    <button class="btn" onclick="pagaPapa(${lav ? 1 : 0})">✓ Sì, pagato</button><button class="btn ghost" onclick="closeSheet()">Annulla</button></div>`);
+}
+async function pagaPapa(lav) {
+  const d = $('#p_paid').value || todayIso(), ids = papaList().filter(x => !x.paid_at && (lav ? x.kind === 'lavori' : x.kind !== 'lavori')).map(x => x.id);
+  if (!ids.length) return closeSheet();
+  const { error } = await sb.from('papa_spese').update({ paid_at: d }).in('id', ids);
+  if (error) return toast('Non salvato: ' + error.message);
+  papaList().forEach(x => { if (ids.indexOf(x.id) >= 0) x.paid_at = d; });
+  closeSheet(); toast('Saldato · ' + ids.length + ' spese'); render();
 }
 
 // ---------------- Calendario ----------------
@@ -1772,7 +1877,7 @@ function tplInfo() {
 function tplSalvaInfo() { Object.keys(TPL_INFO_DEF).forEach(k => TPL.info[k] = $('#ti_' + k).value.trim()); tplSalva(); closeSheet(); render(); toast('Dati salvati'); }
 function apriMessaggi(id) { const b = S.data.bookings.find(x => x.id === id); TPL.b = id; if (b && PROP[b.property]) TPL.s = b.property; go('msg'); const c = document.querySelector('.tplb[aria-pressed="true"]'); if (c) c.scrollIntoView({ inline: 'center', block: 'nearest' }); }
 function render() {
-  const v = { home: viewHome, bil: viewBilancio, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer, prz: viewPrezzi, msg: viewMsg }[S.tab]();
+  const v = { home: viewHome, bil: viewBilancio, mov: viewMov, pul: viewPul, fisse: viewFisse, per: viewPer, prz: viewPrezzi, msg: viewMsg, papa: viewPapa }[S.tab]();
   $('#root').innerHTML = `<div class="app"><main>${v}
     <p class="small muted" style="text-align:center;margin-top:28px"><button style="border:0;background:none;color:var(--muted);font-size:12px" onclick="logout()">${ic('logout', 14)} Esci</button></p></main>${navBar()}</div>`;
 }
