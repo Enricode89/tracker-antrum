@@ -784,9 +784,9 @@ function viewMov() {
 }
 
 // ---------------- Spese papà (Enrico, 7/11/2026) ----------------
-// Spese anticipate da papà: si restituiscono tutte insieme con "Pagato". Pulizie e biancheria (Biinish, Urtin)
-// NON passano da qui: restano a parte nella sezione Pulizie (scelta di Enrico, 7/11/2026).
-const PAPA_TIPO = { spesa: 'Spesa', lavori: 'Lavori' };
+// Spese anticipate da papà: si restituiscono tutte insieme con "Pagato" (scelta di Enrico, 7/11/2026).
+// Nel debito con papà ci sono anche pulizie (Biinish) e biancheria (Urtin); nel bilancio no: ci sono già dalla sezione Pulizie.
+const PAPA_TIPO = { spesa: 'Spesa', pulizie: 'Pulizie/biancheria', lavori: 'Lavori' };
 const papaList = () => (S.data && S.data.papa) || [];
 const papaAperto = (lav) => papaList().filter(x => !x.paid_at && (lav ? x.kind === 'lavori' : x.kind !== 'lavori')).reduce((s, x) => s + (+x.amount || 0), 0);
 function viewPapa() {
@@ -825,14 +825,14 @@ function viewPapa() {
 function openPapa(id) {
   const x = id ? papaList().find(e => e.id === id) : { date: todayIso(), descr: '', amount: '', property: 'entrambe', kind: 'spesa', note: '' };
   sheet(sheetHead(id ? 'Spesa papà' : 'Nuova spesa papà') + `<div class="stack">
-    <label class="field">Cosa<input id="p_descr" value="${esc(x.descr)}" placeholder="Es. lenzuola, detersivi, prosecco…"></label>
+    <label class="field">Cosa<input id="p_descr" value="${esc(x.descr)}" placeholder="Es. lenzuola, detersivi, Biinish, Urtin…"></label>
     <label class="field">Importo<div class="money" style="border-color:var(--red)"><span style="color:var(--red)">€</span><input id="p_amt" inputmode="decimal" value="${x.amount === '' ? '' : String(x.amount).replace('.', ',')}"></div></label>
     <div class="grid2"><label class="field">Tipo<select id="p_kind">${Object.entries(PAPA_TIPO).map(([k, l]) => `<option value="${k}" ${k === x.kind ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="field">Data<input id="p_date" type="date" value="${x.date || ''}"></label></div>
     <label class="field">Struttura${propSel(x.property, true).replace('id="f_prop"', 'id="p_prop"')}</label>
     <label class="field">Nota<input id="p_note" value="${esc(x.note || '')}"></label>
     ${id ? '' : `<label class="row" style="gap:10px;font-size:14px"><input type="checkbox" id="p_bil" checked style="width:20px;height:20px"> Aggiungi anche alle spese del bilancio</label>
-    <p class="small muted" style="margin:0">Pulizie e biancheria non vanno qui: si segnano in Pulizie.</p>`}
+    <p class="small muted" style="margin:0">Pulizie/biancheria (Biinish, Urtin): solo nel debito con papà, mai nel bilancio (ci sono già in Pulizie).</p>`}
     ${x.paid_at ? `<p class="small muted">Saldata il ${x.paid_at.split('-').reverse().join('/')}</p>` : ''}
     <button class="btn" onclick="savePapa(${id ? `'${id}'` : ''})">Salva</button>
     ${id ? `${x.paid_at ? `<button class="btn ghost" onclick="riapriPapa('${id}')">Segna come non pagata</button>` : ''}<button class="btn ghost" onclick="delPapa('${id}')">Elimina</button>` : ''}</div>`);
