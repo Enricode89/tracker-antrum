@@ -253,6 +253,7 @@ const ICON = {
   alert:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>',
   repeat:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
   receipt:'<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h4"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9"/><path d="M12 8v13"/><path d="M12 8c-2-4-6-4-6-1.5S10 8 12 8z"/><path d="M12 8c2-4 6-4 6-1.5S14 8 12 8z"/>',
   cart:'<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.5 12h11.5l2-8H6.2"/>',
@@ -786,8 +787,14 @@ function viewCal(titolo = 'Calendario') {
   const props = S.calProp === 'entrambe' ? ['loft', 'suite'] : [S.calProp];
   const conf = S.data.bookings.filter(b => b.status === 'confermata' && b.checkout);
   const at = (p, iso) => conf.find(b => b.property === p && b.checkin <= iso && iso < b.checkout);
+  if (!PRZ.cfg && !PRZ.busy && !PRZ.err) setTimeout(przCarica, 0);   // date bloccate (da te, su Airbnb o su Booking): arrivano dallo script
+  const blk = (p, iso) => { if (!PRZ.cfg || at(p, iso)) return ''; const n = przNotte(p, iso); return n.chiuso ? 'te' : n.blocco ? 'ota' : ''; };
   const barStyle = (p, iso, big) => {
     const b = at(p, iso);
+    if (!b && blk(p, iso)) {
+      const l = !blk(p, addDays(iso, -1)) || dowOf(iso) === 1, rr = !blk(p, addDays(iso, 1)) || dowOf(iso) === 0;
+      return `background:repeating-linear-gradient(135deg,#8A9199 0 3px,#B9BEC4 3px 6px);margin-left:${l ? 4 : 0}px;margin-right:${rr ? 4 : 0}px;border-radius:${l ? 6 : 0}px ${rr ? 6 : 0}px ${rr ? 6 : 0}px ${l ? 6 : 0}px`;
+    }
     if (!b) return big ? '' : 'background:#EEF0EC';
     const start = iso === b.checkin, end = addDays(iso, 1) === b.checkout, dw = dowOf(iso);
     const l = start || dw === 1, rr = end || dw === 0;
@@ -811,7 +818,12 @@ function viewCal(titolo = 'Calendario') {
     const dentro = at(p, day), esce = conf.find(b => b.property === p && b.checkout === day);
     if (esce && esce !== dentro) det += detRow(esce, PROP[p] + ' · check-out', '+1 pulizia', true);
     if (dentro) det += detRow(dentro, PROP[p] + (dentro.checkin === day ? ' · check-in' : ' · occupato'));
-    if (!dentro && !esce) det += `<div class="item"><span class="dot" style="background:#E3E5E0"></span><div style="flex:1"><div class="s" style="font-weight:700;text-transform:none">${PROP[p]}</div><div class="t">Libero</div></div></div>`;
+    if (!dentro) {
+      const k = blk(p, day), fut = day >= todayIso(), bt = 'border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;font-size:13px;flex-shrink:0';
+      det += `<div class="item"><span class="dot" style="background:${k ? '#8A9199' : '#E3E5E0'}"></span><div style="flex:1"><div class="s" style="font-weight:700;text-transform:none">${PROP[p]}${esce ? ' · notte' : ''}</div>
+        <div class="t">${k === 'te' ? 'Bloccato da te' : k === 'ota' ? 'Bloccato su Airbnb o Booking' : 'Libero'}</div>${k === 'ota' ? '<div class="small muted">Si sblocca dall\'extranet dove l\'hai chiuso</div>' : ''}</div>
+        ${!fut || k === 'ota' || !PRZ.cfg ? '' : k === 'te' ? `<button style="${bt}" onclick="bloccaGiorno('${p}','${day}',0)">Sblocca</button>` : `<button style="${bt}" onclick="bloccaGiorno('${p}','${day}',1)">${ic('lock', 14)} Blocca</button>`}</div>`;
+    }
   });
   return `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>${titolo}</h1></div>
     <div class="row" style="gap:2px">${titolo === 'Home' ? `<button class="iconbtn" style="margin-right:2px" aria-label="Aggiorna dati" onclick="refresh()">${ic('repeat', 18)}</button>` : ''}<button class="iconbtn" style="border:0;background:none;width:34px" aria-label="Mese precedente" onclick="shiftMonth(-1)">${ic('left', 18)}</button>
@@ -820,10 +832,15 @@ function viewCal(titolo = 'Calendario') {
     <div class="seg">${seg('entrambe', 'Entrambe')}${seg('loft', 'Loft')}${seg('suite', 'Suite')}</div></header>
     <section class="cal"><div class="dow"><span>LUN</span><span>MAR</span><span>MER</span><span>GIO</span><span>VEN</span><span>SAB</span><span>DOM</span></div>
     <div class="grid">${cells}</div>
-    ${props.length === 2 ? '<p class="small muted" style="text-align:center;margin:8px 0 0">Barra sopra: Loft · barra sotto: Suite</p>' : ''}</section>
+    <p class="small muted" style="text-align:center;margin:8px 0 0">${props.length === 2 ? 'Barra sopra: Loft · barra sotto: Suite · ' : ''}<span style="display:inline-block;width:14px;height:8px;border-radius:3px;vertical-align:0;background:repeating-linear-gradient(135deg,#8A9199 0 3px,#B9BEC4 3px 6px)"></span> bloccato</p></section>
     <div class="minis mt">${['airbnb', 'booking', 'diretta'].map(k => `<div class="mini" style="background:#fff;flex-direction:row;align-items:center;gap:8px"><span class="sw" style="width:12px;height:12px;border-radius:4px;background:${CH_COL[k]}"></span><span style="font-size:12px;color:var(--ink)">${k === 'diretta' ? 'Manuali' : CANALE[k]} <span class="muted">${nightsBy[k]}</span></span></div>`).join('')}</div>
     <p class="small muted" style="margin:6px 4px 0">Notti nel mese per canale</p>
     <section class="mt2 stack" style="gap:10px"><h2 style="font-size:18px">${GG_L[dowOf(day)]} ${dLabel(day)}</h2><div class="list">${det}</div></section>`;
+}
+// blocca / sblocca una notte dal calendario principale: stessa chiusura della sezione Prezzi (sito + calendario Panoramic per Airbnb e Booking)
+async function bloccaGiorno(p, d, on) {
+  if (!PRZ.cfg) return toast('Un attimo, carico i calendari…');
+  await przModifica(p, d, d, on ? 'chiudi' : 'apri');
 }
 function detRow(b, lab, extra, outline) {
   const n = diffDays(b.checkin, b.checkout);
@@ -1503,7 +1520,7 @@ async function przApi(cfg) {
 async function przCarica() {
   if (PRZ.busy) return; PRZ.busy = true; PRZ.err = '';
   try { await przApi(); } catch (e) { PRZ.err = e.message; }
-  PRZ.busy = false; if (S.tab === 'prz') render();
+  PRZ.busy = false; if (!$('#ov')) render();
 }
 function przRun(s, d) { return PRZ.cfg.r.find(x => x.s === s && d >= x.da && d <= x.al); }
 function przNotte(s, d) {
@@ -1527,7 +1544,7 @@ function viewPrezzi() {
   for (let g = 1; g <= giorni; g++) {
     const d = isoOf(y, m, g), n = przNotte(s, d), pass = d < oggi, sel = a && d >= a && d <= z;
     const sotto = n.b ? `<span class="pz occ" style="background:${CH_TINT[isManual(n.b) ? 'diretta' : n.b.source][0]};color:${CH_TINT[isManual(n.b) ? 'diretta' : n.b.source][1]}">${esc((n.b.guest_name || 'Ospite').split(' ')[0])}</span>`
-      : n.blocco ? '<span class="pz occ" title="Bloccato su Airbnb o Booking">—</span>' : n.chiuso ? '<span class="pz chiuso">chiuso</span>' : `<span class="pz${n.custom ? ' cus' : ''}">${n.p ? Math.round(n.p) : '—'}</span>`;
+      : n.chiuso ? '<span class="pz chiuso">blocc.</span>' : n.blocco ? '<span class="pz occ" title="Bloccato su Airbnb o Booking">—</span>' : n.chiuso ? '<span class="pz chiuso">blocc.</span>' : `<span class="pz${n.custom ? ' cus' : ''}">${n.p ? Math.round(n.p) : '—'}</span>`;
     cells += `<button class="pcell${pass ? ' pass' : ''}${sel ? ' sel' : ''}${d === oggi ? ' today' : ''}" ${pass ? 'disabled' : ''} onclick="przTocca('${d}')" aria-label="${g} ${MESI[m]}"><span class="n">${g}</span>${sotto}</button>`;
   }
   const cal = `<section class="cal" style="margin-top:12px"><div class="between" style="padding:0 6px 10px">
@@ -1535,8 +1552,8 @@ function viewPrezzi() {
       <b style="font-size:16px">${MESI[m]} ${y}</b>
       <button class="iconbtn" style="border:0;background:none;width:34px" ${PRZ.off >= 17 ? 'disabled' : ''} aria-label="Mese successivo" onclick="PRZ.off++;render()">${ic('right', 18)}</button></div>
     <div class="dow"><span>LUN</span><span>MAR</span><span>MER</span><span>GIO</span><span>VEN</span><span>SAB</span><span>DOM</span></div><div class="grid">${cells}</div>
-    <div class="przleg small muted"><span><i class="cus"></i>prezzo diverso</span><span><i class="chiuso"></i>chiuso sul sito</span><span><i class="occ"></i>prenotato · — bloccato</span></div></section>`;
-  let az = `<p class="small muted" style="text-align:center;margin:14px 8px 0">Tocca un giorno, o il primo e l'ultimo di un periodo, per cambiare prezzo o chiudere le date sul sito.</p>`;
+    <div class="przleg small muted"><span><i class="cus"></i>prezzo diverso</span><span><i class="chiuso"></i>bloccato da te</span><span><i class="occ"></i>prenotato · — bloccato su Airbnb/Booking</span></div></section>`;
+  let az = `<p class="small muted" style="text-align:center;margin:14px 8px 0">Tocca un giorno, o il primo e l'ultimo di un periodo, per cambiare prezzo o bloccare le date.</p>`;
   if (a) {
     const nn = Math.round((Date.parse(z) - Date.parse(a)) / 864e5) + 1;
     let pr = null; for (let d = a; d <= z; d = dPiu(d)) { const p = przNotte(s, d).p; pr = pr === null ? p : pr === p ? p : -1; }
@@ -1545,9 +1562,9 @@ function viewPrezzi() {
       <label class="field">Prezzo a notte<div class="money"><span>€</span><input id="pz_p" inputmode="decimal" value="${pr > 0 ? String(pr).replace('.', ',') : ''}" placeholder="${pr === -1 ? 'prezzi diversi' : ''}"></div></label>
       <button class="btn" ${PRZ.busy ? 'disabled' : ''} onclick="przApplica('p')">Salva prezzo</button>
       <div class="grid2"><button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="przApplica('base')">Torna al base</button>
-      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--red-d);border:1px solid var(--red-t)" onclick="przApplica('chiudi')">Chiudi sul sito</button></div>
-      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="przApplica('apri')">Riapri sul sito</button>
-      <p class="small muted" style="margin:0">Vale solo per il sito: su Airbnb e Booking prezzi e chiusure restano da impostare lì.</p></div>`;
+      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--red-d);border:1px solid var(--red-t)" onclick="przApplica('chiudi')">${ic('lock', 14)} Blocca date</button></div>
+      <button class="btn" style="height:44px;font-size:14px;background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="przApplica('apri')">Sblocca date</button>
+      <p class="small muted" style="margin:0">I prezzi valgono solo per il sito. Le date bloccate si chiudono sul sito, su Airbnb e su Booking (tramite il calendario Panoramic, entro qualche ora).</p></div>`;
   }
   return top + base + cal + az;
 }
@@ -1561,8 +1578,11 @@ function przTocca(d) {
 }
 // ricostruisce i periodi della struttura dopo la modifica: giorni uguali consecutivi = un solo periodo (listino sempre compatto)
 async function przApplica(op) {
-  const s = PRZ.s, a = PRZ.sel.a, z = PRZ.sel.b || PRZ.sel.a, val = num(($('#pz_p') || {}).value);
+  const val = num(($('#pz_p') || {}).value);
   if (op === 'p' && !(val > 0)) return toast('Inserisci il prezzo a notte');
+  await przModifica(PRZ.s, PRZ.sel.a, PRZ.sel.b || PRZ.sel.a, op, val);
+}
+async function przModifica(s, a, z, op, val) {
   const giorni = {};
   PRZ.cfg.r.filter(x => x.s === s).forEach(x => { for (let d = x.da; d <= x.al; d = dPiu(d)) giorni[d] = { p: x.p || 0, c: x.c ? 1 : 0 }; });
   for (let d = a; d <= z; d = dPiu(d)) {
@@ -1577,11 +1597,11 @@ async function przApplica(op) {
     if (l && l.s === s && dPiu(l.al) === d && (l.p || 0) === g.p && (l.c || 0) === g.c) l.al = d;
     else { const o = { s, da: d, al: d }; if (g.p) o.p = g.p; if (g.c) o.c = 1; r.push(o); }
   });
-  await przSalva(Object.assign({}, PRZ.cfg, { r }), { p: 'Prezzo salvato', base: 'Tornato al prezzo base', chiudi: 'Date chiuse sul sito', apri: 'Date riaperte sul sito' }[op]);
+  await przSalva(Object.assign({}, PRZ.cfg, { r }), { p: 'Prezzo salvato · il sito è già aggiornato', base: 'Tornato al prezzo base · il sito è già aggiornato', chiudi: 'Bloccato: sito subito, Airbnb e Booking al loro prossimo aggiornamento', apri: 'Sbloccato: sito subito, Airbnb e Booking al loro prossimo aggiornamento' }[op]);
 }
 async function przSalva(cfg, msg) {
   PRZ.busy = true; render();
-  try { await przApi(cfg); PRZ.sel = null; closeSheet(); toast(msg + ' · il sito è già aggiornato'); }
+  try { await przApi(cfg); PRZ.sel = null; closeSheet(); toast(msg); }
   catch (e) { toast('Non salvato: ' + e.message); }
   PRZ.busy = false; render();
 }
