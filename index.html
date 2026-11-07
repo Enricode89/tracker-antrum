@@ -793,12 +793,13 @@ function viewPapa() {
   const f = S.papaF || 'aperte', ap = papaList().filter(x => !x.paid_at && x.kind !== 'lavori'), lav = papaList().filter(x => x.kind === 'lavori');
   const lavAp = lav.filter(x => !x.paid_at), tot = papaAperto(), totLav = papaAperto(true);
   const dd = s => { if (!s) return ''; const d = parse(s); return d.getUTCDate() + ' ' + MESI_B[d.getUTCMonth()]; };
-  const riga = x => `<button class="item" onclick="openPapa('${x.id}')"><span class="dot" style="background:${x.kind === 'pulizie' ? '#2F6FD1' : x.kind === 'lavori' ? '#8A5A00' : 'var(--red)'}"></span>
+  // sezione solo da guardare (scelta di Enrico): le spese arrivano dal foglio con ↻, qui si segna solo "Pagato"
+  const riga = x => `<div class="item"><span class="dot" style="background:${x.kind === 'pulizie' ? '#2F6FD1' : x.kind === 'lavori' ? '#8A5A00' : 'var(--red)'}"></span>
     <div style="flex:1;min-width:0"><div class="t">${esc(x.descr)}</div><div class="s">${[dd(x.date), PAPA_TIPO[x.kind], x.property === 'entrambe' ? '' : PROP[x.property]].filter(Boolean).join(' · ')}${x.kind === 'pulizie' ? ' <span class="badge" style="background:#EEF0EC;color:var(--muted)">già nelle pulizie</span>' : ''}</div></div>
-    <span class="amt minus">${eur(+x.amount)}</span></button>`;
+    <span class="amt minus">${eur(+x.amount)}</span></div>`;
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.papaF='${k}';render()">${l}</button>`;
   let html = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Spese papà</h1></div>
-    <div class="row" style="gap:8px"><button class="iconbtn" id="papaSync" aria-label="Carica le spese nuove dal foglio Excel" onclick="papaDalFoglio()">${ic('repeat', 18)}</button><button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova spesa papà" onclick="openPapa()">${ic('plus', 20, 2.6)}</button></div></div></header>
+    <div class="row" style="gap:8px"><button class="iconbtn" id="papaSync" aria-label="Carica le spese nuove dal foglio Excel" onclick="papaDalFoglio()">${ic('repeat', 18)}</button></div></div></header>
     <div class="chips"><button class="chip" onclick="go('mov')">${ic('left', 14)} Movimenti</button>${chip('aperte', 'Da saldare')}${chip('saldati', 'Saldati')}${lav.length ? chip('lavori', 'Lavori') : ''}</div>`;
   if (f === 'aperte') {
     const dal = ap.map(x => x.date).filter(Boolean).sort()[0];
