@@ -798,7 +798,7 @@ function viewPapa() {
     <span class="amt minus">${eur(+x.amount)}</span></button>`;
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.papaF='${k}';render()">${l}</button>`;
   let html = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Spese papà</h1></div>
-    <div class="row" style="gap:8px"><button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova spesa papà" onclick="openPapa()">${ic('plus', 20, 2.6)}</button></div></div></header>
+    <div class="row" style="gap:8px"><button class="iconbtn" id="papaSync" aria-label="Carica le spese nuove dal foglio Excel" onclick="papaDalFoglio()">${ic('repeat', 18)}</button><button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova spesa papà" onclick="openPapa()">${ic('plus', 20, 2.6)}</button></div></div></header>
     <div class="chips"><button class="chip" onclick="go('mov')">${ic('left', 14)} Movimenti</button>${chip('aperte', 'Da saldare')}${chip('saldati', 'Saldati')}${lav.length ? chip('lavori', 'Lavori') : ''}</div>`;
   if (f === 'aperte') {
     const dal = ap.map(x => x.date).filter(Boolean).sort()[0];
@@ -871,6 +871,21 @@ async function riapriPapa(id) {
   const { error } = await sb.from('papa_spese').update({ paid_at: null }).eq('id', id);
   if (error) return toast('Non salvata: ' + error.message);
   papaList().find(e => e.id === id).paid_at = null; closeSheet(); toast('Di nuovo da saldare'); render();
+}
+// ↻: righe nuove del foglio Loft&Suite.xlsx (Drive) → Spese papà (lo script le legge e le inserisce, senza doppioni)
+let PAPA_SYNC = false;
+async function papaDalFoglio() {
+  if (PAPA_SYNC) return; PAPA_SYNC = true;
+  const b = $('#papaSync'); if (b) { b.disabled = true; const s = b.querySelector('svg'); if (s) s.style.animation = 'gira .9s linear infinite'; }
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch(SCRIPT_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ azione: 'papa', token: data && data.session ? data.session.access_token : '' }) }).then(x => x.json());
+    if (!r.ok) throw new Error(r.errore || 'non riuscito');
+    await loadData(); render();
+    toast(r.nuove ? `${r.nuove} ${r.nuove === 1 ? 'spesa nuova' : 'spese nuove'} dal foglio` : 'Foglio controllato · nessuna spesa nuova');
+  } catch (e) { toast('Foglio non letto: ' + (e.message || e)); render(); }
+  finally { PAPA_SYNC = false; }
 }
 function chiediPagaPapa(lav) {
   const tot = papaAperto(lav);
