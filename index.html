@@ -799,7 +799,7 @@ function viewPapa() {
   const chip = (k, l) => `<button class="chip" aria-pressed="${f === k}" onclick="S.papaF='${k}';render()">${l}</button>`;
   let html = `<header class="top"><div class="between"><div><div class="brand">Antrum Loft &amp; Suite</div><h1>Spese papà</h1></div>
     <div class="row" style="gap:8px"><button class="iconbtn" style="background:var(--ink);color:#fff;border-color:var(--ink)" aria-label="Nuova spesa papà" onclick="openPapa()">${ic('plus', 20, 2.6)}</button></div></div></header>
-    <div class="chips"><button class="chip" onclick="go('mov')">${ic('left', 14)} Movimenti</button>${chip('aperte', 'Da saldare')}${chip('saldati', 'Saldati')}${chip('lavori', 'Lavori')}</div>`;
+    <div class="chips"><button class="chip" onclick="go('mov')">${ic('left', 14)} Movimenti</button>${chip('aperte', 'Da saldare')}${chip('saldati', 'Saldati')}${lav.length ? chip('lavori', 'Lavori') : ''}</div>`;
   if (f === 'aperte') {
     const dal = ap.map(x => x.date).filter(Boolean).sort()[0];
     html += `<div class="card mt" style="background:var(--ink);color:#fff;padding:18px">
