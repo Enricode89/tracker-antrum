@@ -993,6 +993,7 @@ function viewPul() {
   const flag = (b, key, label, cost) => `<button class="paybtn ${b[key] ? 'ok' : 'no'}" aria-label="${label} ${b[key] ? 'pagata' : 'da pagare'}: tocca per cambiare" onclick="togglePaid('${b.id}','${key}')">${ic(b[key] ? 'check' : 'x', 15, 3)}${label} ${eur0(cost(b))}</button>`;
   const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
   return header('Pulizie') + pushCard() + pulSituazione() + `
+    <button class="card" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;text-align:left;margin-top:10px" onclick="linkPulizie()">${ic('spark', 20)}<span style="flex:1"><b>Link per l'addetta pulizie</b><br><span class="small muted">Solo via Tasso / via Masuccio e i giorni di check-out, con notifiche</span></span>${ic('right', 18)}</button>
     <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
     <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
     <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
@@ -1415,6 +1416,30 @@ function msgCheckin(b) {
   const nome = (b.guest_name || '').trim().split(/\s+/)[0] || '';
   return `Ciao ${nome}, ecco il link dove puoi effettuare il check-in per il soggiorno dal ${d(b.checkin)}${b.checkout ? ' al ' + d(b.checkout) : ''} nella struttura Antrum ${PROP[b.property] || ''}:\n${CHECKIN_URL}?b=${b.id}\nTieni pronto il documento: ti chiederemo foto fronte e retro e un selfie con il documento in mano.`;
 }
+// Link per l'addetta pulizie (pagina antrumapartments.com/pulizie/): niente nomi né importi; notifiche per pulizie nuove, annullate o spostate
+async function linkPulizie(nuovo) {
+  if (nuovo && !confirm('Creare un link nuovo? Quello vecchio smette di funzionare e l\'addetta dovrà riattivare le notifiche.')) return;
+  sheet(sheetHead('Link addetta pulizie') + '<p class="muted" style="text-align:center;margin:30px 0">Un attimo…</p>');
+  try {
+    const { data } = await sb.auth.getSession();
+    const r = await fetch(SCRIPT_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ azione: 'pulizie', token: data && data.session ? data.session.access_token : '', nuovo: !!nuovo }) }).then(x => x.json());
+    if (!r.ok) throw new Error(r.errore || 'non riuscito');
+    S.linkPul = r.url;
+    const bt = 'height:46px;font-size:15px;background:#fff;color:var(--ink);border:1px solid var(--line)';
+    sheet(sheetHead('Link addetta pulizie') + `<div class="stack" style="gap:12px">
+      <p style="margin:0">Vede solo <b>Pulizia via Tasso</b> e <b>Pulizia via Masuccio</b> nei giorni di check-out, il calendario e le pulizie già fatte. Niente nomi né importi.</p>
+      <div class="card small" style="padding:12px 14px;${r.iscritti ? 'background:var(--green-t);color:#17633A' : ''}"><b>${r.iscritti ? '🔔 Notifiche attive su ' + r.iscritti + (r.iscritti === 1 ? ' telefono' : ' telefoni') : '🔕 Notifiche non ancora attivate'}</b><br>${r.iscritti ? 'Le arriva un avviso per ogni pulizia nuova, annullata o spostata.' : 'Le attiva lei dal link con il tasto "Attiva".'}</div>
+      <button class="btn green" onclick="mandaLinkPulizie()">${ic('chat', 18)} Manda su WhatsApp</button>
+      <button class="btn" style="${bt}" onclick="condividi(S.linkPul)">Copia solo il link</button>
+      <button class="btn" style="${bt}" onclick="apriInterno(S.linkPul,'Pulizie · come la vede lei')">Guarda la sua pagina</button>
+      <button class="btn ghost" onclick="linkPulizie(true)">Crea un link nuovo (il vecchio non funziona più)</button></div>`);
+  } catch (e) { sheet(sheetHead('Link addetta pulizie') + `<p style="text-align:center;margin:30px 0">Non riuscito: ${esc(e.message || String(e))}</p>`); }
+}
+function msgPulizie() {
+  return `Ciao! Ecco il link con le pulizie di via Tasso e via Masuccio:\n${S.linkPul}\nTrovi i giorni di check-out, il calendario e le pulizie già fatte.\nPer ricevere una notifica quando arriva una nuova pulizia premi "Attiva". Su iPhone prima tocca Condividi → "Aggiungi alla schermata Home" e apri Pulizie da lì.`;
+}
+function mandaLinkPulizie() { location.href = 'https://wa.me/?text=' + encodeURIComponent(msgPulizie()); }
 async function copiaCheckin(id) { return condividi(msgCheckin(S.data.bookings.find(x => x.id === id))); }
 async function condividi(text) {
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e.name === 'AbortError') return; }
