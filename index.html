@@ -220,7 +220,7 @@ nav.bottom .n{position:relative}.nbadge{position:absolute;top:-4px;left:calc(50%
 const SUPABASE_URL = 'https://tgswoagxubpglnirsuxi.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uwFBcSGHc5PSQp-Ma2nO5w_1BjhAZ4Z';   // chiave pubblica: i dati restano protetti dal PIN
 const LOGIN_EMAIL  = 'antrumloft@gmail.com';
-const CHECKIN_URL = 'https://enricode89.github.io/tracker-antrum/checkin/';
+const CHECKIN_URL = 'https://antrumapartments.com/checkin/';
 const SCRIPT_API = 'https://script.google.com/macros/s/AKfycbzVWh2PXMxgYzvhUqaHPVS4WTJLdnAr0ra7VG5tqVt6G8WopIbYezJMnJqeHqwLkRaq9g/exec';
 const PIN_LEN = 6;
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
@@ -1199,11 +1199,11 @@ function openBooking(id, nuova) {
   const n = b.checkout ? diffDays(b.checkin, b.checkout) : null;
   const giorno = iso => { const d = parse(iso); return `<span class="small muted" style="font-weight:700">${GG_L[d.getUTCDay()]}</span><b style="font-size:20px">${d.getUTCDate()} ${MESI_B[d.getUTCMonth()]}</b>`; };
   const tel = String(b.guest_phone || '').trim();
-  // appena inserita a mano: le date vanno chiuse a mano anche su Airbnb e Booking
-  const promemoria = nuova && b.checkout ? `<div role="alert" style="background:var(--amber-t);color:var(--amber-d);border-radius:16px;padding:14px 16px;display:grid;gap:6px">
-      <b style="font-size:16px">Blocca le date su Airbnb e Booking</b>
+  // appena inserita a mano: le date si chiudono da sole (sito subito, Airbnb e Booking tramite il calendario Panoramic)
+  const promemoria = nuova && b.checkout ? `<div role="status" style="background:#E6F4EC;color:#17633A;border-radius:16px;padding:14px 16px;display:grid;gap:6px">
+      <b style="font-size:16px">${ic('lock', 16)} Date bloccate in automatico</b>
       <span style="font-size:14px">Antrum ${PROP[b.property] || ''} · ${GG_L[parse(b.checkin).getUTCDay()]} ${dLabel(b.checkin)} → ${GG_L[parse(b.checkout).getUTCDay()]} ${dLabel(b.checkout)} · ${n} ${n === 1 ? 'notte' : 'notti'}</span>
-      <span class="small" style="font-weight:600">Chiudi queste date a mano su entrambe le piattaforme, poi manda all'ospite il link check-in qui sotto.</span></div>` : '';
+      <span class="small" style="font-weight:600">Sito subito, Airbnb e Booking al loro prossimo aggiornamento (di solito entro qualche ora). Ora manda all'ospite il link check-in qui sotto.</span></div>` : '';
   sheet(sheetHead('Soggiorno') + `
     <div class="stack">${promemoria}
     <div class="card stack" style="gap:14px">
@@ -1432,7 +1432,7 @@ function openConverti(id) {
       <div class="row" style="gap:8px;margin-top:6px;align-items:center"><span class="badge" style="background:${CH_TINT.booking[0]};color:${CH_TINT.booking[1]};font-size:11px;padding:5px 9px">Booking</span><span>→</span><span class="badge" style="background:${CH_TINT.diretta[0]};color:${CH_TINT.diretta[1]};font-size:11px;padding:5px 9px">Diretta</span></div></div>
     <label class="field">Importo incassato direttamente<div class="money"><span>€</span><input id="c_amt" inputmode="decimal" value="${pre != null && b.payout != null ? String(pre).replace('.', ',') : ''}" placeholder="${pre != null ? String(pre).replace('.', ',') : '0,00'}"></div></label>
     <div class="small muted">Niente commissioni Booking. Se poi arriva la mail di cancellazione di Booking, il tracker la ignora per questa prenotazione.</div>
-    <div class="alert">${ic('alert')}<span style="flex:1"><b>Blocca le date su Booking e Airbnb</b><br>Dopo la cancellazione su Booking le date tornano libere: chiudile tu per evitare doppie prenotazioni.</span></div>
+    <div class="alert">${ic('lock')}<span style="flex:1"><b>Le date restano bloccate</b><br>Diventata diretta, la prenotazione entra nel calendario Panoramic: Airbnb e Booking la vedono come occupata anche dopo la cancellazione su Booking.</span></div>
     <button class="btn" style="background:#1E8A4C" onclick="converti('${b.id}')">Trasforma in diretta</button>
     <button class="btn" style="background:#fff;color:var(--ink);border:1px solid var(--line)" onclick="openBooking('${b.id}')">Annulla</button></div>`);
 }
