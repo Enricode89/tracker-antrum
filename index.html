@@ -314,7 +314,7 @@ const ritenuta = b => !(+b.payout > 0) ? 0 : b.withholding != null ? +b.withhold
 const ritStimata = b => b.source === 'airbnb' && +b.payout > 0 && b.withholding == null;
 const colorOf = b => isManual(b) ? CH_COL.diretta : CH_COL[b.source];
 const pul = b => +(b.cleaning_cost ?? 20);   // solo pulizia
-const lin = b => +(b.linen_cost ?? 7);       // solo biancheria
+const lin = b => +(b.linen_cost ?? 9);       // solo biancheria (7 € fino al 24/11/2026, poi 9 €: il valore vero è salvato su ogni prenotazione)
 const clean = b => pul(b) + lin(b);
 const unpaid = b => (b.cleaning_paid ? 0 : pul(b)) + (b.linen_paid ? 0 : lin(b));
 
@@ -994,7 +994,7 @@ function viewPul() {
   const dueP = done.filter(b => !b.cleaning_paid).length, dueL = done.filter(b => !b.linen_paid).length;
   return header('Pulizie') + pushCard() + pulSituazione() + `
     <button class="card" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;text-align:left;margin-top:10px" onclick="linkPulizie()">${ic('spark', 20)}<span style="flex:1"><b>Link per l'addetta pulizie</b><br><span class="small muted">Solo via Tasso / via Masuccio e i giorni di check-out, con notifiche</span></span>${ic('right', 18)}</button>
-    <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 7</p>
+    <p class="small muted" style="margin:10px 4px">A ogni check-out: pulizia € 20 + biancheria € 9</p>
     <div class="chips">${chip('tutte', 'Tutte')}${chip('da', 'Da pagare')}${chip('pagate', 'Pagate')}</div>
     <div class="stack mt" style="gap:8px">${list.length ? list.map(b => { const d = parse(b.checkout), fut = b.checkout > todayIso(); return `
       <div class="card stack" style="padding:12px;gap:10px;${fut ? 'opacity:.6' : ''}">
